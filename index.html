@@ -156,9 +156,10 @@
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
+  // Atualizado para aceitar exatamente os nomes enviados no GitHub
   const rawSources = {
-    lobo: 'assets/lobo.png',
-    cerrado: 'assets/cerrado.png',
+    lobo: 'assets/Sprite Sheet de Lobo em Ação.png',
+    cerrado: 'assets/Kit Pixel Art do Cerrado Brasileiro.png',
     seed: 'assets/seed.png',
     npc: 'assets/npc.jpg'
   };
@@ -210,11 +211,9 @@
         resolve();
       };
       img.onerror = () => {
-        // Fallbacks visuais automáticos se o arquivo não for encontrado
         if (key === 'lobo') {
           sheets.lobo = createFallbackCanvas(64, 64, (g) => {
             g.fillStyle = '#40e0d0'; g.fillRect(16, 16, 32, 32);
-            g.fillStyle = '#6c757d'; g.fillRect(20, 20, 24, 24);
           });
         } else if (key === 'seed') {
           sheets.seed = createFallbackCanvas(32, 32, (g) => {
@@ -223,7 +222,6 @@
         } else if (key === 'npc') {
           sheets.npc = createFallbackCanvas(64, 64, (g) => {
             g.fillStyle = '#1d3557'; g.fillRect(16, 16, 32, 48);
-            g.fillStyle = '#f1faee'; g.fillRect(24, 8, 16, 16);
           });
         } else {
           sheets.cerrado = createFallbackCanvas(100, 100, (g) => {
@@ -874,4 +872,225 @@
         frameList = LOBO_FRAMES.crouch; fIdx = 1;
       } else if (player.standTimer > 0) {
         frameList = LOBO_FRAMES.stand; fIdx = 1;
-      } else if (Math.abs(player.vx)
+      } else if (Math.abs(player.vx) > 95) {
+        frameList = LOBO_FRAMES.run; fIdx = Math.floor(player.animTimer) % frameList.length;
+      } else if (Math.abs(player.vx) > 8) {
+        frameList = LOBO_FRAMES.walk; fIdx = Math.floor(player.animTimer) % frameList.length;
+      }
+
+      const drawH = player.crouching ? 24 : 36;
+      const drawW = player.attackTimer > 0 ? 32 : 24;
+      drawSheetRegion(
+        sheets.lobo,
+        frameList[fIdx],
+        player.x - 2,
+        player.y + player.h - drawH,
+        drawW,
+        drawH,
+        player.facing === -1
+      );
+    }
+
+    for (const p of particles) {
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), 3, 3);
+    }
+
+    ctx.restore();
+
+    if (state === 'PLAY' || state === 'DELIVER') {
+      ctx.fillStyle = 'rgba(10, 22, 16, 0.55)';
+      ctx.fillRect(6, 6, 178, 18);
+      ctx.fillRect(canvas.width - 134, 6, 128, 18);
+
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i < lives ? '#ff4d6d' : '#3a4f45';
+        ctx.fillRect(12 + i * 11, 11, 8, 8);
+      }
+
+      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], 52, 8, 12, 14);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(`x${String(levelData.collectedInLevel).padStart(2, '0')}`, 66, 18);
+
+      ctx.fillStyle = '#ffcf40';
+      ctx.fillText(`1-${lvl.cfg.id}`, 104, 18);
+
+      ctx.fillStyle = '#a7f3d0';
+      ctx.fillText(String(score).padStart(6, '0'), 134, 18);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(formatTime(elapsedMs), canvas.width - 126, 18);
+    }
+  }
+
+  function finishLevelDialog() {
+    state = 'END';
+    const levelBonus = 500;
+    const noHitBonus = levelHits === 0 ? 400 : 0;
+    score += levelBonus + noHitBonus;
+    totalRunDelivered += levelData.collectedInLevel;
+
+    const save = Storage.get();
+    if (currentLevelIdx + 2 > save.unlockedLevel && currentLevelIdx + 2 <= LEVELS.length) {
+      save.unlockedLevel = currentLevelIdx + 2;
+    }
+    Storage.save(save);
+
+    if (levelHits === 0) Storage.unlockAch('no_hit');
+    if (currentLevelIdx === 2) Storage.unlockAch('springs');
+    if (levelData.collectedInLevel >= levelData.seeds.length && levelData.seeds.length > 0) {
+      Storage.unlockAch('hero');
+    }
+
+    const isLast = currentLevelIdx === LEVELS.length - 1;
+    if (isLast) {
+      Storage.unlockAch('guardian');
+      saveRunRecord();
+    }
+
+    document.getElementById('end-title').textContent = isLast ? 'CERRADO PROTEGIDO!' : `${LEVELS[currentLevelIdx].name} CONCLUÍDA!`;
+    document.getElementById('end-content').innerHTML = `
+      <p><strong>Engenheira Ambiental:</strong> "Excelente trabalho! Essas sementes serão utilizadas para recuperar áreas degradadas do Cerrado. Cada semente faz a diferença!"</p><br>
+      <p>Sementes Entregues na Fase: <strong>${levelData.collectedInLevel}</strong></p>
+      <p>Bônus Sem Colisões: <strong>+${noHitBonus} pts</strong></p>
+      <p>Pontuação Total: <strong>${score}</strong></p>
+      <p>Tempo da Run: <strong>${formatTime(elapsedMs)}</strong></p>
+    `;
+    const btnNext = document.getElementById('btn-next');
+    btnNext.textContent = isLast ? 'JOGAR NOVAMENTE' : 'PRÓXIMA FASE';
+    btnNext.onclick = () => isLast ? startRun(0) : startLevel(currentLevelIdx + 1);
+    document.getElementById('menu-end').classList.remove('hidden');
+  }
+
+  function endGame(won) {
+    state = 'END';
+    saveRunRecord();
+    document.getElementById('end-title').textContent = won ? 'AVENTURA CONCLUÍDA!' : 'FIM DE JOGO';
+    document.getElementById('end-content').innerHTML = `
+      <p>Pontuação Final: <strong>${score}</strong></p>
+      <p>Sementes Coletadas: <strong>${totalRunSeeds}</strong> | Entregues: <strong>${totalRunDelivered}</strong></p>
+      <p>Tempo Total: <strong>${formatTime(elapsedMs)}</strong></p>
+    `;
+    const btnNext = document.getElementById('btn-next');
+    btnNext.textContent = 'TENTAR NOVAMENTE';
+    btnNext.onclick = () => startRun(currentLevelIdx);
+    document.getElementById('menu-end').classList.remove('hidden');
+  }
+
+  function saveRunRecord() {
+    const save = Storage.get();
+    if (score > save.bestScore) save.bestScore = score;
+    if (totalRunSeeds > save.maxSeeds) save.maxSeeds = totalRunSeeds;
+    if (currentLevelIdx === LEVELS.length - 1 && (save.bestTimeMs === null || elapsedMs < save.bestTimeMs)) {
+      save.bestTimeMs = elapsedMs;
+    }
+    save.history.unshift({
+      date: new Date().toLocaleDateString('pt-BR'),
+      score, seeds: totalRunSeeds, time: formatTime(elapsedMs), diff: difficulty.toUpperCase()
+    });
+    save.history = save.history.slice(0, 8);
+    Storage.save(save);
+  }
+
+  function hideAllMenus() {
+    ['menu-main', 'menu-sub', 'menu-pause', 'menu-end'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+  }
+
+  function setPause(paused) {
+    if (paused) {
+      state = 'PAUSE';
+      document.getElementById('menu-pause').classList.remove('hidden');
+    } else {
+      state = 'PLAY';
+      document.getElementById('menu-pause').classList.add('hidden');
+    }
+  }
+
+  function openSubMenu(title, html) {
+    hideAllMenus();
+    document.getElementById('sub-title').textContent = title;
+    document.getElementById('sub-content').innerHTML = html;
+    document.getElementById('menu-sub').classList.remove('hidden');
+  }
+
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      difficulty = btn.dataset.diff;
+    };
+  });
+
+  document.getElementById('btn-play').onclick = () => startRun(0);
+  document.getElementById('btn-resume').onclick = () => setPause(false);
+  document.getElementById('btn-restart').onclick = () => startLevel(currentLevelIdx);
+  document.getElementById('btn-quit').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
+  document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
+  document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
+
+  document.getElementById('btn-levels').onclick = () => {
+    const save = Storage.get();
+    const btns = LEVELS.map((l, idx) => {
+      const unlocked = (idx + 1) <= save.unlockedLevel;
+      return `<p style="margin-bottom:8px;"><button ${unlocked ? '' : 'disabled'} onclick="window.__selectLevel(${idx})">${unlocked ? '▶' : '🔒'} ${l.name}</button></p>`;
+    }).join('');
+    openSubMenu('SELEÇÃO DE FASES', btns);
+  };
+  window.__selectLevel = (idx) => startRun(idx);
+
+  document.getElementById('btn-howto').onclick = () => {
+    openSubMenu('COMO JOGAR', `
+      <p><strong>A / D ou Setas:</strong> Correr para esquerda e direita.</p>
+      <p><strong>W / Espaço / Backspace:</strong> Pular (pressione novamente no ar para Pulo Duplo).</p>
+      <p><strong>S / Seta Baixo:</strong> Agachar para passar sob galhos baixos.</p>
+      <p><strong>J / Z / Enter:</strong> Chute energético para quebrar pedras rolantes.</p>
+      <p><strong>Dica Mario:</strong> Bata por baixo nos blocos amarelos para liberar sementes extras e pise em cima dos obstáculos rolantes para quicar!</p>
+    `);
+  };
+
+  document.getElementById('btn-missions').onclick = () => {
+    openSubMenu('MISSÕES AMBIENTAIS', LEVELS.map(l => `<p style="margin-bottom:8px;"><strong>${l.name}:</strong> ${l.mission}</p>`).join(''));
+  };
+
+  document.getElementById('btn-records').onclick = () => {
+    const s = Storage.get();
+    const rows = s.history.length
+      ? s.history.map(h => `<p>• [${h.date}] ${h.diff} — <strong>${h.score} pts</strong> | ${h.seeds} sementes | ${h.time}</p>`).join('')
+      : '<p>Nenhuma tentativa registrada ainda.</p>';
+    openSubMenu('RECORDES PESSOAIS', `
+      <p><strong>Maior Pontuação:</strong> ${s.bestScore}</p>
+      <p><strong>Máximo de Sementes:</strong> ${s.maxSeeds}</p>
+      <p><strong>Melhor Tempo Completo:</strong> ${s.bestTimeMs ? formatTime(s.bestTimeMs) : '--:--:---'}</p>
+      <hr style="margin:8px 0;border-color:#2e5a44;">
+      ${rows}
+    `);
+  };
+
+  document.getElementById('btn-achievements').onclick = () => {
+    const s = Storage.get();
+    openSubMenu('GALERIA DE CONQUISTAS', ACHIEVEMENTS_DEF.map(a => {
+      const ok = s.achievements.includes(a.id);
+      return `<p style="margin-bottom:6px;color:${ok ? '#ffcf40' : '#7a998b'};">${ok ? '★' : '☆'} <strong>${a.name}:</strong> ${a.desc}</p>`;
+    }).join(''));
+  };
+
+  let lastTs = performance.now();
+  function loop(ts) {
+    const dt = Math.min(0.05, (ts - lastTs) / 1000);
+    lastTs = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  loadAllAssets().then(() => {
+    levelData = buildLevel(0);
+    requestAnimationFrame(loop);
+  });
+})();
+</script>
+</body>
+</html>
