@@ -200,7 +200,7 @@
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], gr = d[i + 1], b = d[i + 2];
       if (type === 'lobo' || type === 'seed') {
-        if (r > 242 && gr > 242 && b > 242) d[i + 3] = 0;
+        if (r > 240 && gr > 240 && b > 240) d[i + 3] = 0;
       } else if (type === 'npc') {
         if (r > 155 && b > 120 && gr < 115 && (r - gr) > 55) d[i + 3] = 0;
       } else if (type === 'cerrado') {
@@ -248,17 +248,17 @@
     })));
   }
 
-  // Coordenadas corrigidas com precisão para capturar perfeitamente a cabeça/boca do lobo na sprite sheet exata
+  // Coordenadas limpas e ajustadas para focar perfeitamente no personagem sem restos de fundo
   const LOBO_FRAMES = {
-    idle:   [[0.02,0.04,0.08,0.20],[0.12,0.04,0.08,0.20],[0.22,0.04,0.08,0.20],[0.32,0.04,0.08,0.20]],
-    walk:   [[0.51,0.04,0.08,0.20],[0.61,0.04,0.08,0.20],[0.71,0.04,0.08,0.20],[0.81,0.04,0.08,0.20]],
-    run:    [[0.02,0.29,0.09,0.19],[0.14,0.29,0.09,0.19],[0.26,0.29,0.09,0.19],[0.38,0.29,0.09,0.19]],
-    jump:   [[0.50,0.30,0.09,0.18],[0.61,0.29,0.09,0.19],[0.71,0.28,0.09,0.19]],
-    fall:   [[0.81,0.28,0.09,0.19],[0.89,0.30,0.09,0.17]],
-    crouch: [[0.22,0.57,0.09,0.15],[0.34,0.60,0.10,0.12]],
-    stand:  [[0.13,0.81,0.09,0.14],[0.23,0.79,0.09,0.16]],
-    attack: [[0.51,0.77,0.09,0.20],[0.61,0.76,0.12,0.21],[0.76,0.77,0.09,0.20]],
-    djump:  [[0.88,0.77,0.09,0.20]]
+    idle:   [[0.015,0.035,0.08,0.20],[0.115,0.035,0.08,0.20],[0.215,0.035,0.08,0.20],[0.315,0.035,0.08,0.20]],
+    walk:   [[0.51,0.035,0.08,0.20],[0.61,0.035,0.08,0.20],[0.71,0.035,0.08,0.20],[0.81,0.035,0.08,0.20]],
+    run:    [[0.015,0.29,0.09,0.19],[0.135,0.29,0.09,0.19],[0.255,0.29,0.09,0.19],[0.375,0.29,0.09,0.19]],
+    jump:   [[0.495,0.29,0.09,0.19],[0.605,0.28,0.09,0.19],[0.71,0.27,0.09,0.20]],
+    fall:   [[0.805,0.27,0.09,0.20],[0.885,0.29,0.09,0.18]],
+    crouch: [[0.22,0.57,0.09,0.15],[0.335,0.60,0.10,0.12]],
+    stand:  [[0.125,0.81,0.09,0.14],[0.23,0.79,0.09,0.16]],
+    attack: [[0.50,0.76,0.09,0.20],[0.60,0.75,0.12,0.21],[0.75,0.76,0.09,0.20]],
+    djump:  [[0.87,0.76,0.09,0.20]]
   };
 
   const CERRADO_SPRITES = {
@@ -312,7 +312,6 @@
     ctx.restore();
   }
 
-  // Função para desenhar coração em pixel art nas vidas
   function drawPixelHeart(x, y) {
     ctx.fillStyle = '#ff4d6d';
     ctx.fillRect(x + 2, y, 3, 2);
@@ -431,7 +430,6 @@
 
   const GROUND_Y = 224;
 
-  // Personagem maior e destacado
   const player = {
     x: 48, y: GROUND_Y - 64, w: 36, h: 64,
     vx: 0, vy: 0, facing: 1,
@@ -513,7 +511,6 @@
       if ((x / 480) % 2 === 0) pits.push({ x, w: 54 });
     }
 
-    // Plataformas flutuantes limpas contendo apenas blocos de interrogação e sementes (sem obstáculos em cima)
     for (let x = 260; x < cfg.length - 360; x += 270) {
       const py = (x % 540 === 0) ? 140 : 162;
       platforms.push({ x, y: py, w: 70, h: 16 });
@@ -529,7 +526,6 @@
       }
     }
 
-    // Obstáculos estritamente restritos ao chão (GROUND_Y)
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone'];
     for (let x = 360; x < cfg.length - 340; x += Math.round(255 / mult)) {
       const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
@@ -826,7 +822,6 @@
     drawSheetRegion(sheets.cerrado, bgNorm, -parallaxOffset, 0, bgW, GROUND_Y);
     drawSheetRegion(sheets.cerrado, bgNorm, bgW - parallaxOffset, 0, bgW, GROUND_Y);
 
-    // Fundo levemente escurecido/borrado para dar foco à jogabilidade
     ctx.fillStyle = 'rgba(10, 22, 16, 0.4)';
     ctx.fillRect(0, 0, canvas.width, GROUND_Y);
 
@@ -901,7 +896,6 @@
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
     drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
 
-    // Balão de fala do NPC com a frase exata solicitada
     if (state === 'DELIVER') {
       const bx = lvl.npcX - 70;
       const by = GROUND_Y - 95;
@@ -916,7 +910,6 @@
       ctx.fillText('preservar a biodiversidade', bx + 6, by + 22);
     }
 
-    // Personagem Lobo-Guará grande, visível e perfeitamente renderizado com boca/rosto corrigido
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
       let fIdx = Math.floor(player.animTimer) % frameList.length;
@@ -968,7 +961,6 @@
       ctx.fillRect(6, 6, 178, 18);
       ctx.fillRect(canvas.width - 134, 6, 128, 18);
 
-      // Renderiza corações em pixel art para as vidas
       for (let i = 0; i < 3; i++) {
         if (i < lives) {
           drawPixelHeart(12 + i * 16, 8);
@@ -1101,7 +1093,6 @@
   document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
 
-  // Menu de seleção de fases com estética do Cerrado
   document.getElementById('btn-levels').onclick = () => {
     const save = Storage.get();
     const cards = LEVELS.map((l, idx) => {
