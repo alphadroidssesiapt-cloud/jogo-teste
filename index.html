@@ -149,42 +149,36 @@
     #btn-jump { right: 16px; bottom: 16px; width: 64px; height: 64px; border-radius: 50%; background: rgba(224, 159, 31, 0.55); border-color: #ffe66d; }
     #btn-attack { right: 92px; bottom: 24px; width: 52px; height: 52px; border-radius: 50%; background: rgba(230, 80, 80, 0.55); border-color: #ff9999; }
     #btn-pause-mob { top: 12px; right: 12px; width: 40px; height: 32px; font-size: 12px; pointer-events: auto; }
+
+body { min-height:100dvh; height:auto; overflow:auto; padding:8px; padding-bottom:max(8px,env(safe-area-inset-bottom)); }
+#game-shell { flex-shrink:0; width:min(96vw,960px,calc((100dvh - 40px)*16/9)); }
+#menu-main { padding:0; background: url("assets/Menu Pixelado Aventura Cerrado.png") center/100% 100% no-repeat; }
+#menu-main button { position:absolute; opacity:0; padding:0; border:0; transform:none; width:26%; height:8%; left:37%; }
+#menu-main button:focus-visible { opacity:1; background:#a95b16; outline:3px solid white; }
+#btn-play {top:38.5%} #btn-howto {top:47.5%} #btn-missions {top:55.2%} #btn-achievements {top:63%} #btn-records {top:70.8%} #btn-options {top:78.5%}
+#menu-main .mode-btn {top:89%; width:12%; height:10%; left:73.5%; opacity:0; }
+#menu-main .mode-btn[data-mode=celular] {left:85.5%;width:14%;}
+#menu-main .mode-btn.active {opacity:1;background:transparent;color:transparent;border:3px solid #ffe66d;box-shadow:none;border-radius:12px;}
+#touch-controls.active {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px; width:min(96vw,960px); position:relative; inset:auto; padding:8px 0;pointer-events:auto;}
+#touch-controls .t-btn {position:static;width:100%;height:clamp(52px,10vw,78px);font-size:clamp(10px,2.5vw,20px);border-radius:12px;}
+body:has(#touch-controls.active) #game-shell {width:min(96vw,960px,calc((100dvh - 112px)*16/9));}
+body:has(#touch-controls.active) #info-controls {display:none;}
+@media (orientation:portrait) { #game-shell,body:has(#touch-controls.active) #game-shell {width:96vw;} #touch-controls.active {grid-template-columns:repeat(3,minmax(0,1fr));} .overlay {padding:6px;} .panel-box {font-size:11px;padding:6px;} }
   </style>
 </head>
 <body>
   <div id="game-shell">
     <canvas id="gameCanvas" width="480" height="270"></canvas>
 
-    <div id="touch-controls">
-      <div id="btn-left" class="t-btn">◀</div>
-      <div id="btn-right" class="t-btn">▶</div>
-      <div id="btn-down" class="t-btn">▼</div>
-      <div id="btn-jump" class="t-btn">PULA</div>
-      <div id="btn-attack" class="t-btn">CHUTE</div>
-      <div id="btn-pause-mob" class="t-btn">⏸</div>
-    </div>
-
     <div id="menu-main" class="overlay">
-      <h1>ALERTA FAUNA</h1>
-      <h2>AVENTURA PELO CERRADO</h2>
-      <div style="margin-bottom:4px; font-size:11px; color:#7ee0b8;">MODO DE JOGO:</div>
-      <div class="mode-row">
-        <button class="mode-btn active" data-mode="pc">💻 PC (TECLADO)</button>
-        <button class="mode-btn" data-mode="celular">📱 CELULAR (TELA)</button>
-      </div>
-      <div class="diff-row">
-        <button class="diff-btn" data-diff="facil">FÁCIL</button>
-        <button class="diff-btn active" data-diff="normal">NORMAL</button>
-        <button class="diff-btn" data-diff="dificil">DIFÍCIL</button>
-      </div>
-      <div class="menu-grid">
-        <button id="btn-play">▶ JOGAR</button>
-        <button id="btn-levels" class="secondary">FASES</button>
-        <button id="btn-howto" class="secondary">COMO JOGAR</button>
-        <button id="btn-missions" class="secondary">MISSÕES</button>
-        <button id="btn-records" class="secondary">RECORDES</button>
-        <button id="btn-achievements" class="secondary">CONQUISTAS</button>
-      </div>
+      <button id="btn-play" aria-label="Jogar">Jogar</button>
+      <button id="btn-howto">Como jogar</button>
+      <button id="btn-missions">Missões</button>
+      <button id="btn-achievements">Conquistas</button>
+      <button id="btn-records">Recordes</button>
+      <button id="btn-options">Opções</button>
+      <button class="mode-btn active" data-mode="pc">PC</button>
+      <button class="mode-btn" data-mode="celular">Celular</button>
     </div>
 
     <div id="menu-sub" class="overlay hidden">
@@ -211,6 +205,15 @@
       </div>
     </div>
   </div>
+    <div id="touch-controls">
+      <div id="btn-left" class="t-btn">◀</div>
+      <div id="btn-right" class="t-btn">▶</div>
+      <div id="btn-down" class="t-btn">▼</div>
+      <div id="btn-jump" class="t-btn">PULA</div>
+      <div id="btn-attack" class="t-btn">CHUTE</div>
+      <div id="btn-pause-mob" class="t-btn">⏸</div>
+    </div>
+
   <div id="info-controls" class="controls-bar">
     [A/D] Mover &nbsp;|&nbsp; [W / ESPAÇO / BACKSPACE] Pular &amp; Pulo Duplo &nbsp;|&nbsp; [S] Agachar &nbsp;|&nbsp; [J / Z] Chute &nbsp;|&nbsp; [P] Pausar
   </div>
@@ -647,7 +650,7 @@
       }
     }
 
-    const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone', 'bird_fly'];
+    const obsTypes = ['rock', 'rolling_cone', 'rolling_cone', 'branch_high', 'rolling_cone', 'bird_fly'];
     for (let x = 340; x < cfg.length - 340; x += Math.round(230 / mult)) {
       const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
       if (inPit) continue;
@@ -991,7 +994,7 @@
     }
     for (const p of lvl.pits) {
       if (p.x+p.w < cameraX || p.x > cameraX+canvas.width) continue;
-      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES.waterfall, p.x, GROUND_Y, p.w, canvas.height-GROUND_Y);
+      const shadow = ctx.createLinearGradient(0,GROUND_Y,0,canvas.height); shadow.addColorStop(0,'#39251c'); shadow.addColorStop(1,'#080b0c'); ctx.fillStyle=shadow; ctx.fillRect(p.x,GROUND_Y,p.w,canvas.height-GROUND_Y); ctx.fillStyle='#80502e'; ctx.fillRect(p.x,GROUND_Y,3,canvas.height-GROUND_Y); ctx.fillRect(p.x+p.w-3,GROUND_Y,3,canvas.height-GROUND_Y);
     }
 
     for (const plat of lvl.platforms) {
@@ -1241,7 +1244,7 @@
   document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; document.getElementById('touch-controls').classList.remove('active'); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
 
-  document.getElementById('btn-levels').onclick = () => {
+  function showLevels() {
     const save = Storage.get();
     const cards = LEVELS.map((l, idx) => {
       const unlocked = (idx + 1) <= save.unlockedLevel;
@@ -1257,12 +1260,13 @@
     }).join('');
     openSubMenu('RELATÓRIO DE FASES & DIÁLOGOS', cards);
   };
+  document.getElementById('btn-options').onclick = () => { openSubMenu('OPÇÕES', '<p>Dificuldade: <select id="difficulty-choice"><option value="facil">Fácil</option><option value="normal">Normal</option><option value="dificil">Difícil</option></select></p><button id="btn-levels">Escolher fase</button>'); const d=document.getElementById('difficulty-choice'); d.value=difficulty; d.onchange=()=>difficulty=d.value; document.getElementById('btn-levels').onclick=showLevels; };
   window.__selectLevel = (idx) => startRun(idx);
 
   document.getElementById('btn-howto').onclick = () => {
     openSubMenu('COMO JOGAR', `
       <p><strong>PC:</strong> [A/D] Mover | [W/Espaço] Pular & Pulo Duplo | [S] Agachar | [J/Z] Chute.</p>
-      <p><strong>Celular:</strong> Utilize os botões direcionais (◀ ▶), o botão de agachar (▼), pulo e chute diretamente na tela horizontal.</p>
+      <p><strong>Celular:</strong> Utilize os botões direcionais (◀ ▶), o botão de agachar (▼), pulo e chute abaixo da tela do jogo.</p>
       <p><strong>Dica:</strong> Colete sementes e desvie dos animais e remova apenas obstáculos inanimados!</p>
     `);
   };
