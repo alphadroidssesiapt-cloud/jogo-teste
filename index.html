@@ -186,7 +186,7 @@ body:has(#touch-controls.active) #info-controls {display:none;}
 
 
 /* Controle portátil: sobreposto apenas nas extremidades em paisagem. */
-#touch-controls.active {position:fixed;inset:0;width:100%;height:100dvh;padding:0;display:block;pointer-events:none;z-index:9;--key:clamp(38px,8dvh,68px);--edge:clamp(8px,2vw,28px);}
+#touch-controls.active {position:fixed;inset:0;width:100%;height:100dvh;padding:0;display:block;pointer-events:none;z-index:9;--key:clamp(48px,11.2dvh,95px);--edge:clamp(8px,2vw,28px);}
 #touch-controls .t-btn {position:absolute;inset:auto;width:var(--key);height:var(--key);padding:0;background:rgba(0,0,0,.32);border:2px solid rgba(255,255,255,.85);color:white;box-shadow:0 1px 5px #0008;font-size:calc(var(--key)*.48);border-radius:9px;pointer-events:auto;touch-action:none;}
 #touch-controls .t-btn:active {background:rgba(255,255,255,.42);}
 #touch-controls #btn-left {left:var(--edge);bottom:calc(var(--edge) + var(--key));}
@@ -196,15 +196,16 @@ body:has(#touch-controls.active) #info-controls {display:none;}
 #touch-controls #btn-jump,#touch-controls #btn-attack {border-radius:50%;width:calc(var(--key)*1.25);height:calc(var(--key)*1.25);}
 #touch-controls #btn-jump {right:var(--edge);bottom:calc(var(--edge) + var(--key));}
 #touch-controls #btn-attack {right:calc(var(--edge) + var(--key)*1.4);bottom:var(--edge);}
-#touch-controls #btn-pause-mob {right:var(--edge);top:var(--edge);width:48px;height:26px;border-radius:20px;font-size:14px;}
+#touch-controls #btn-pause-mob {right:var(--edge);top:var(--edge);width:64px;height:36px;border-radius:20px;font-size:18px;}
 body:has(#touch-controls.active) {height:100dvh;min-height:0;padding:0;overflow:hidden;background:#080c0a;}
 body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 / 9));border-width:2px;box-shadow:none;}
 @media (orientation:portrait) {
  body:has(#touch-controls.active) #game-shell {width:100vw;}
- #touch-controls.active {position:relative;height:calc(var(--key)*3 + 28px);flex-shrink:0;--key:clamp(40px,11vw,60px);}
- #touch-controls #btn-pause-mob {top:4px;right:calc(50% - 24px);}
+ #touch-controls.active {position:relative;height:calc(var(--key)*3 + 28px);flex-shrink:0;--key:clamp(48px,15vw,84px);}
+ #touch-controls #btn-pause-mob {top:4px;right:calc(50% - 32px);}
 }
 
+@media (orientation:landscape) { #touch-controls.active { --key:clamp(36px,min(11.2dvh,12vw),95px); } }
 </style>
 </head>
 <body>
@@ -1164,6 +1165,7 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 
   function finishLevelDialog() {
     state = 'END';
+    document.getElementById('touch-controls').classList.remove('active');
     const levelBonus = 500;
     const noHitBonus = levelHits === 0 ? 400 : 0;
     score += levelBonus + noHitBonus;
@@ -1267,8 +1269,10 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
       playMode = btn.dataset.mode;
       const infoBar = document.getElementById('info-controls');
       if (playMode === 'celular') {
-        infoBar.textContent = 'Modo Celular Ativado: Utilize os botões virtuais na tela.';
+        infoBar.textContent = '';
+        infoBar.hidden = true;
       } else {
+        infoBar.hidden = false;
         infoBar.textContent = '[A/D] Mover | [W/Espaço] Pular | [S] Agachar | [J/Z] Chute | [P] Pausar';
       }
     };
