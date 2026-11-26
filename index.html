@@ -296,7 +296,7 @@
     ctx.restore();
   }
 
-  // Desenha contorno exato na silhueta orgânica do sprite (sem caixas retangulares)
+  // Desenha contorno exato na silhueta orgânica do sprite mantendo a aparência original
   function drawOutlinedSprite(sheet, normRect, dx, dy, dw, dh, flipX = false, outlineColor = '#ffcf40') {
     if (!sheet) return;
     const [nx, ny, nw, nh] = normRect;
@@ -429,8 +429,9 @@
 
   const GROUND_Y = 224;
 
+  // Personagem maior e visível (hitbox 34x60)
   const player = {
-    x: 48, y: GROUND_Y - 54, w: 32, h: 54,
+    x: 48, y: GROUND_Y - 60, w: 34, h: 60,
     vx: 0, vy: 0, facing: 1,
     onGround: false, jumpsLeft: 2,
     crouching: false, attackTimer: 0, invulnTimer: 0,
@@ -464,16 +465,16 @@
 
   function tryJump() {
     if (player.onGround) {
-      player.vy = -340;
+      player.vy = -345;
       player.onGround = false;
       player.jumpsLeft = 1;
       AudioFX.jump();
-      spawnParticles(player.x + 16, player.y + player.h, '#d8f3dc', 6);
+      spawnParticles(player.x + 17, player.y + player.h, '#d8f3dc', 6);
     } else if (player.jumpsLeft > 0) {
-      player.vy = -295;
+      player.vy = -300;
       player.jumpsLeft = 0;
       AudioFX.djump();
-      spawnParticles(player.x + 16, player.y + player.h, '#74c69d', 8);
+      spawnParticles(player.x + 17, player.y + player.h, '#74c69d', 8);
     }
   }
 
@@ -525,33 +526,38 @@
       }
     }
 
+    // Obstáculos gerados perfeitamente apoiados no chão (GROUND_Y)
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone'];
     for (let x = 360; x < cfg.length - 340; x += Math.round(255 / mult)) {
       const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
       if (inPit) continue;
       const t = obsTypes[(Math.floor(x / 100) + idx) % obsTypes.length];
       if (t === 'branch_high') {
-        obstacles.push({ type: 'branch', x, y: GROUND_Y - 56, w: 42, h: 20, defeat: false });
+        const h = 22;
+        obstacles.push({ type: 'branch', x, y: GROUND_Y - h, w: 44, h: h, defeat: false });
         seeds.push({ x: x + 13, y: GROUND_Y - 18, collected: false, bob: 0 });
       } else if (t === 'rolling_cone') {
+        const h = 26;
         obstacles.push({
-          type: 'roller', x, y: GROUND_Y - 24, w: 24, h: 24,
+          type: 'roller', x, y: GROUND_Y - h, w: 26, h: h,
           vx: -52 * mult, baseX: x, defeated: false
         });
+      } else if (t === 'cactus') {
+        const h = 38;
+        obstacles.push({ type: t, x, y: GROUND_Y - h, w: 20, h: h, defeated: false });
       } else {
-        obstacles.push({
-          type: t, x, y: GROUND_Y - (t === 'cactus' ? 34 : 26),
-          w: t === 'cactus' ? 18 : 28, h: t === 'cactus' ? 34 : 26, defeated: false
-        });
+        const h = t === 'rock' ? 28 : 24;
+        obstacles.push({ type: t, x, y: GROUND_Y - h, w: 30, h: h, defeated: false });
       }
     }
 
     for (let x = 90; x < cfg.length - 200; x += 175) {
       const fl = cfg.flora[Math.floor(x / 175) % cfg.flora.length];
-      decors.push({ sprite: fl, x, y: GROUND_Y, w: fl === 'bush' ? 28 : 46, h: fl === 'bush' ? 22 : 54 });
+      const fh = fl === 'bush' ? 22 : 54;
+      decors.push({ sprite: fl, x, y: GROUND_Y - fh, w: fl === 'bush' ? 28 : 46, h: fh });
       if ((x / 175) % 2 === 1) {
         const fa = cfg.fauna[Math.floor(x / 350) % cfg.fauna.length];
-        decors.push({ sprite: fa, x: x + 58, y: GROUND_Y, w: 28, h: 22 });
+        decors.push({ sprite: fa, x: x + 58, y: GROUND_Y - 22, w: 28, h: 22 });
       }
     }
 
@@ -581,7 +587,7 @@
     cameraX = 0;
     particles = [];
     player.x = 48;
-    player.y = GROUND_Y - 54;
+    player.y = GROUND_Y - 60;
     player.vx = 0;
     player.vy = 0;
     player.facing = 1;
@@ -623,13 +629,13 @@
     if (down && player.onGround) {
       if (!player.crouching) {
         player.crouching = true;
-        player.y += 20;
-        player.h = 34;
+        player.y += 24;
+        player.h = 36;
       }
     } else if (player.crouching) {
       player.crouching = false;
-      player.y -= 20;
-      player.h = 54;
+      player.y -= 24;
+      player.h = 60;
       player.standTimer = 0.16;
     }
 
@@ -719,8 +725,8 @@
     }
 
     const kickBox = player.attackTimer > 0 ? {
-      x: player.facing === 1 ? player.x + player.w : player.x - 24,
-      y: player.y + 6, w: 24, h: 34
+      x: player.facing === 1 ? player.x + player.w : player.x - 26,
+      y: player.y + 6, w: 26, h: 36
     } : null;
 
     for (const obs of levelData.obstacles) {
@@ -734,7 +740,7 @@
         obs.defeated = true;
         score += 150;
         AudioFX.stomp();
-        spawnParticles(obs.x + 12, obs.y + 12, '#ffcf40', 10);
+        spawnParticles(obs.x + 13, obs.y + 13, '#ffcf40', 10);
         continue;
       }
 
@@ -744,7 +750,7 @@
           player.vy = -260;
           score += 150;
           AudioFX.stomp();
-          spawnParticles(obs.x + 12, obs.y + 12, '#ffcf40', 10);
+          spawnParticles(obs.x + 13, obs.y + 13, '#ffcf40', 10);
         } else {
           damagePlayer(false);
         }
@@ -757,12 +763,12 @@
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
       player.crouching = false;
-      player.h = 54;
-      player.y = GROUND_Y - 54;
+      player.h = 60;
+      player.y = GROUND_Y - 60;
       state = 'DELIVER';
       levelData.deliverTimer = 0;
       AudioFX.win();
-      spawnParticles(levelData.npcX + 12, GROUND_Y - 38, '#ffcf40', 22);
+      spawnParticles(levelData.npcX + 12, GROUND_Y - 40, '#ffcf40', 22);
     }
 
     updateParticles(dt);
@@ -773,7 +779,7 @@
     lives--;
     levelHits++;
     AudioFX.hit();
-    spawnParticles(player.x + 14, player.y + 26, '#ff6b6b', 14);
+    spawnParticles(player.x + 17, player.y + 30, '#ff6b6b', 14);
 
     if (lives <= 0) {
       endGame(false);
@@ -833,7 +839,7 @@
     ctx.globalAlpha = 0.65;
     for (const d of lvl.decors) {
       if (d.x + d.w < cameraX - 20 || d.x > cameraX + canvas.width + 20) continue;
-      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[d.sprite], d.x, d.y - d.h, d.w, d.h);
+      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[d.sprite], d.x, d.y, d.w, d.h);
     }
     ctx.restore();
 
@@ -873,7 +879,7 @@
       drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 16, 18);
     }
 
-    // Obstáculos e inimigos com contorno nítido na silhueta orgânica
+    // Obstáculos e inimigos apoiados no chão com contorno orgânico
     for (const obs of lvl.obstacles) {
       if (obs.defeated) continue;
       let spriteKey = obs.type;
@@ -891,9 +897,9 @@
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
-    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 54, 30, 54, true);
+    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
 
-    // Personagem Lobo-Guará com contorno exato na silhueta
+    // Personagem Lobo-Guará grande e destacado na silhueta
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
       let fIdx = Math.floor(player.animTimer) % frameList.length;
@@ -919,13 +925,13 @@
         frameList = LOBO_FRAMES.walk; fIdx = Math.floor(player.animTimer) % frameList.length;
       }
 
-      const drawH = player.crouching ? 36 : 58;
-      const drawW = player.attackTimer > 0 ? 46 : 38;
+      const drawH = player.crouching ? 38 : 64;
+      const drawW = player.attackTimer > 0 ? 50 : 42;
       
       drawOutlinedSprite(
         sheets.lobo,
         frameList[fIdx],
-        player.x - 3,
+        player.x - 4,
         player.y + player.h - drawH,
         drawW,
         drawH,
