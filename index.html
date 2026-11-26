@@ -248,17 +248,17 @@
     })));
   }
 
-  // Mapeamento corrigido e garantido para capturar perfeitamente rosto, corpo e boca dos frames
+  // Coordenadas corrigidas com precisão para capturar perfeitamente a cabeça/boca do lobo na sprite sheet exata
   const LOBO_FRAMES = {
-    idle:   [[0.005,0.02,0.10,0.22],[0.105,0.02,0.10,0.22],[0.205,0.02,0.10,0.22],[0.305,0.02,0.10,0.22]],
-    walk:   [[0.50,0.02,0.10,0.22],[0.60,0.02,0.10,0.22],[0.70,0.02,0.10,0.22],[0.80,0.02,0.10,0.22]],
-    run:    [[0.005,0.28,0.11,0.21],[0.12,0.28,0.11,0.21],[0.23,0.28,0.11,0.21],[0.35,0.28,0.11,0.21]],
-    jump:   [[0.48,0.28,0.12,0.21],[0.60,0.28,0.11,0.21],[0.71,0.27,0.11,0.22]],
-    fall:   [[0.80,0.27,0.11,0.22],[0.89,0.29,0.11,0.20]],
-    crouch: [[0.21,0.55,0.12,0.17],[0.33,0.58,0.13,0.14]],
-    stand:  [[0.12,0.80,0.11,0.17],[0.23,0.78,0.11,0.19]],
-    attack: [[0.49,0.76,0.11,0.22],[0.60,0.75,0.15,0.23],[0.75,0.76,0.11,0.22]],
-    djump:  [[0.86,0.76,0.12,0.22]]
+    idle:   [[0.02,0.04,0.08,0.20],[0.12,0.04,0.08,0.20],[0.22,0.04,0.08,0.20],[0.32,0.04,0.08,0.20]],
+    walk:   [[0.51,0.04,0.08,0.20],[0.61,0.04,0.08,0.20],[0.71,0.04,0.08,0.20],[0.81,0.04,0.08,0.20]],
+    run:    [[0.02,0.29,0.09,0.19],[0.14,0.29,0.09,0.19],[0.26,0.29,0.09,0.19],[0.38,0.29,0.09,0.19]],
+    jump:   [[0.50,0.30,0.09,0.18],[0.61,0.29,0.09,0.19],[0.71,0.28,0.09,0.19]],
+    fall:   [[0.81,0.28,0.09,0.19],[0.89,0.30,0.09,0.17]],
+    crouch: [[0.22,0.57,0.09,0.15],[0.34,0.60,0.10,0.12]],
+    stand:  [[0.13,0.81,0.09,0.14],[0.23,0.79,0.09,0.16]],
+    attack: [[0.51,0.77,0.09,0.20],[0.61,0.76,0.12,0.21],[0.76,0.77,0.09,0.20]],
+    djump:  [[0.88,0.77,0.09,0.20]]
   };
 
   const CERRADO_SPRITES = {
@@ -312,34 +312,7 @@
     ctx.restore();
   }
 
-  function drawOutlinedSprite(sheet, normRect, dx, dy, dw, dh, flipX = false, outlineColor = '#ffcf40') {
-    if (!sheet) return;
-    const [nx, ny, nw, nh] = normRect;
-    const sx = Math.floor(nx * sheet.width);
-    const sy = Math.floor(ny * sheet.height);
-    const sw = Math.floor(nw * sheet.width);
-    const sh = Math.floor(nh * sheet.height);
-
-    ctx.save();
-    const offsets = [[-1,0], [1,0], [0,-1], [0,1], [-1,-1], [1,1], [-1,1], [1,-1]];
-    ctx.fillStyle = outlineColor;
-    for (const [ox, oy] of offsets) {
-      if (flipX) {
-        ctx.save();
-        ctx.translate(Math.round(dx + dw + ox), Math.round(dy + oy));
-        ctx.scale(-1, 1);
-        ctx.drawImage(sheet, sx, sy, sw, sh, 0, 0, Math.round(dw), Math.round(dh));
-        ctx.restore();
-      } else {
-        ctx.drawImage(sheet, sx, sy, sw, sh, Math.round(dx + ox), Math.round(dy + oy), Math.round(dw), Math.round(dh));
-      }
-    }
-    ctx.restore();
-
-    drawSheetRegion(sheet, normRect, dx, dy, dw, dh, flipX);
-  }
-
-  // Função para desenhar coração em pixel art no lugar dos quadrados vermelhos de vida
+  // Função para desenhar coração em pixel art nas vidas
   function drawPixelHeart(x, y) {
     ctx.fillStyle = '#ff4d6d';
     ctx.fillRect(x + 2, y, 3, 2);
@@ -540,7 +513,7 @@
       if ((x / 480) % 2 === 0) pits.push({ x, w: 54 });
     }
 
-    // Plataformas flutuantes limpas com blocos e sementes
+    // Plataformas flutuantes limpas contendo apenas blocos de interrogação e sementes (sem obstáculos em cima)
     for (let x = 260; x < cfg.length - 360; x += 270) {
       const py = (x % 540 === 0) ? 140 : 162;
       platforms.push({ x, y: py, w: 70, h: 16 });
@@ -556,7 +529,7 @@
       }
     }
 
-    // Obstáculos apoiados firmemente no chão (GROUND_Y)
+    // Obstáculos estritamente restritos ao chão (GROUND_Y)
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone'];
     for (let x = 360; x < cfg.length - 340; x += Math.round(255 / mult)) {
       const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
@@ -922,13 +895,13 @@
       } else if (obs.type === 'cactus') {
         outlineColor = '#48cae4';
       }
-      drawOutlinedSprite(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, outlineColor);
+      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h);
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
     drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
 
-    // Balão de fala do NPC com a frase solicitada
+    // Balão de fala do NPC com a frase exata solicitada
     if (state === 'DELIVER') {
       const bx = lvl.npcX - 70;
       const by = GROUND_Y - 95;
@@ -943,7 +916,7 @@
       ctx.fillText('preservar a biodiversidade', bx + 6, by + 22);
     }
 
-    // Personagem Lobo-Guará grande, visível e perfeitamente renderizado com boca/rosto
+    // Personagem Lobo-Guará grande, visível e perfeitamente renderizado com boca/rosto corrigido
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
       let fIdx = Math.floor(player.animTimer) % frameList.length;
@@ -972,15 +945,14 @@
       const drawH = player.crouching ? 40 : 68;
       const drawW = player.attackTimer > 0 ? 54 : 44;
       
-      drawOutlinedSprite(
+      drawSheetRegion(
         sheets.lobo,
         frameList[fIdx],
         player.x - 4,
         player.y + player.h - drawH,
         drawW,
         drawH,
-        player.facing === -1,
-        '#00f5d4'
+        player.facing === -1
       );
     }
 
@@ -1129,7 +1101,7 @@
   document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
 
-  // Menu de seleção de fases redesenhado com estética do Cerrado
+  // Menu de seleção de fases com estética do Cerrado
   document.getElementById('btn-levels').onclick = () => {
     const save = Storage.get();
     const cards = LEVELS.map((l, idx) => {
