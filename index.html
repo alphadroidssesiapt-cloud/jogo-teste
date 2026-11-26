@@ -296,34 +296,6 @@
     ctx.restore();
   }
 
-  // Desenha contorno exato na silhueta orgânica do sprite mantendo a aparência original
-  function drawOutlinedSprite(sheet, normRect, dx, dy, dw, dh, flipX = false, outlineColor = '#ffcf40') {
-    if (!sheet) return;
-    const [nx, ny, nw, nh] = normRect;
-    const sx = Math.floor(nx * sheet.width);
-    const sy = Math.floor(ny * sheet.height);
-    const sw = Math.floor(nw * sheet.width);
-    const sh = Math.floor(nh * sheet.height);
-
-    ctx.save();
-    const offsets = [[-1,0], [1,0], [0,-1], [0,1], [-1,-1], [1,1], [-1,1], [1,-1]];
-    ctx.fillStyle = outlineColor;
-    for (const [ox, oy] of offsets) {
-      if (flipX) {
-        ctx.save();
-        ctx.translate(Math.round(dx + dw + ox), Math.round(dy + oy));
-        ctx.scale(-1, 1);
-        ctx.drawImage(sheet, sx, sy, sw, sh, 0, 0, Math.round(dw), Math.round(dh));
-        ctx.restore();
-      } else {
-        ctx.drawImage(sheet, sx, sy, sw, sh, Math.round(dx + ox), Math.round(dy + oy), Math.round(dw), Math.round(dh));
-      }
-    }
-    ctx.restore();
-
-    drawSheetRegion(sheet, normRect, dx, dy, dw, dh, flipX);
-  }
-
   const AudioFX = (() => {
     let actx = null;
     function ensure() {
@@ -429,9 +401,9 @@
 
   const GROUND_Y = 224;
 
-  // Personagem maior e visível (hitbox 34x60)
+  // Personagem maior e visível (hitbox 34x62)
   const player = {
-    x: 48, y: GROUND_Y - 60, w: 34, h: 60,
+    x: 48, y: GROUND_Y - 62, w: 34, h: 62,
     vx: 0, vy: 0, facing: 1,
     onGround: false, jumpsLeft: 2,
     crouching: false, attackTimer: 0, invulnTimer: 0,
@@ -511,6 +483,7 @@
       if ((x / 480) % 2 === 0) pits.push({ x, w: 54 });
     }
 
+    // Plataformas flutuantes limpas contendo apenas blocos de interrogação e sementes (sem obstáculos em cima)
     for (let x = 260; x < cfg.length - 360; x += 270) {
       const py = (x % 540 === 0) ? 140 : 162;
       platforms.push({ x, y: py, w: 70, h: 16 });
@@ -526,7 +499,7 @@
       }
     }
 
-    // Obstáculos gerados perfeitamente apoiados no chão (GROUND_Y)
+    // Obstáculos estritamente restritos ao chão (GROUND_Y)
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone'];
     for (let x = 360; x < cfg.length - 340; x += Math.round(255 / mult)) {
       const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
@@ -587,7 +560,7 @@
     cameraX = 0;
     particles = [];
     player.x = 48;
-    player.y = GROUND_Y - 60;
+    player.y = GROUND_Y - 62;
     player.vx = 0;
     player.vy = 0;
     player.facing = 1;
@@ -630,12 +603,12 @@
       if (!player.crouching) {
         player.crouching = true;
         player.y += 24;
-        player.h = 36;
+        player.h = 38;
       }
     } else if (player.crouching) {
       player.crouching = false;
       player.y -= 24;
-      player.h = 60;
+      player.h = 62;
       player.standTimer = 0.16;
     }
 
@@ -763,8 +736,8 @@
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
       player.crouching = false;
-      player.h = 60;
-      player.y = GROUND_Y - 60;
+      player.h = 62;
+      player.y = GROUND_Y - 62;
       state = 'DELIVER';
       levelData.deliverTimer = 0;
       AudioFX.win();
@@ -879,7 +852,7 @@
       drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 16, 18);
     }
 
-    // Obstáculos e inimigos apoiados no chão com contorno orgânico
+    // Obstáculos no chão com contorno nítido na silhueta
     for (const obs of lvl.obstacles) {
       if (obs.defeated) continue;
       let spriteKey = obs.type;
@@ -893,13 +866,28 @@
       } else if (obs.type === 'cactus') {
         outlineColor = '#48cae4';
       }
-      drawOutlinedSprite(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, outlineColor);
+      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h);
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
     drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
 
-    // Personagem Lobo-Guará grande e destacado na silhueta
+    // Balão de fala do NPC quando o jogador chega ao final da fase
+    if (state === 'DELIVER') {
+      const bx = lvl.npcX - 70;
+      const by = GROUND_Y - 95;
+      ctx.fillStyle = 'rgba(10, 20, 16, 0.9)';
+      ctx.fillRect(bx, by, 165, 30);
+      ctx.strokeStyle = '#7ee0b8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(bx, by, 165, 30);
+      ctx.fillStyle = '#fff3b0';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText('Obrigado por ajudar a', bx + 6, by + 12);
+      ctx.fillText('preservar a biodiversidade', bx + 6, by + 22);
+    }
+
+    // Personagem Lobo-Guará grande e bem visível
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
       let fIdx = Math.floor(player.animTimer) % frameList.length;
@@ -925,18 +913,17 @@
         frameList = LOBO_FRAMES.walk; fIdx = Math.floor(player.animTimer) % frameList.length;
       }
 
-      const drawH = player.crouching ? 38 : 64;
-      const drawW = player.attackTimer > 0 ? 50 : 42;
+      const drawH = player.crouching ? 38 : 66;
+      const drawW = player.attackTimer > 0 ? 52 : 44;
       
-      drawOutlinedSprite(
+      drawSheetRegion(
         sheets.lobo,
         frameList[fIdx],
-        player.x - 4,
+        player.x - 5,
         player.y + player.h - drawH,
         drawW,
         drawH,
-        player.facing === -1,
-        '#00f5d4'
+        player.facing === -1
       );
     }
 
@@ -1000,7 +987,7 @@
 
     document.getElementById('end-title').textContent = isLast ? 'CERRADO PROTEGIDO!' : `${LEVELS[currentLevelIdx].name} CONCLUÍDA!`;
     document.getElementById('end-content').innerHTML = `
-      <p><strong>Engenheira Ambiental:</strong> "Excelente trabalho! Essas sementes serão utilizadas para recuperar áreas degradadas do Cerrado. Cada semente faz a diferença!"</p><br>
+      <p><strong>Engenheira Ambiental:</strong> "Obrigado por ajudar a preservar a biodiversidade! Cada semente faz a diferença!"</p><br>
       <p>Sementes Entregues na Fase: <strong>${levelData.collectedInLevel}</strong></p>
       <p>Bônus Sem Colisões: <strong>+${noHitBonus} pts</strong></p>
       <p>Pontuação Total: <strong>${score}</strong></p>
