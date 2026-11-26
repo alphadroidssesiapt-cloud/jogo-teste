@@ -156,7 +156,6 @@
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
-  // Atualizado para aceitar exatamente os nomes enviados no GitHub
   const rawSources = {
     lobo: 'assets/Sprite Sheet de Lobo em Ação.png',
     cerrado: 'assets/Kit Pixel Art do Cerrado Brasileiro.png',
@@ -402,8 +401,9 @@
 
   const GROUND_Y = 224;
 
+  // Personagem maior (hitbox 28x48, agachado 28x30)
   const player = {
-    x: 48, y: GROUND_Y - 34, w: 20, h: 34,
+    x: 48, y: GROUND_Y - 48, w: 28, h: 48,
     vx: 0, vy: 0, facing: 1,
     onGround: false, jumpsLeft: 2,
     crouching: false, attackTimer: 0, invulnTimer: 0,
@@ -437,16 +437,16 @@
 
   function tryJump() {
     if (player.onGround) {
-      player.vy = -310;
+      player.vy = -335;
       player.onGround = false;
       player.jumpsLeft = 1;
       AudioFX.jump();
-      spawnParticles(player.x + 10, player.y + player.h, '#d8f3dc', 6);
+      spawnParticles(player.x + 14, player.y + player.h, '#d8f3dc', 6);
     } else if (player.jumpsLeft > 0) {
-      player.vy = -275;
+      player.vy = -295;
       player.jumpsLeft = 0;
       AudioFX.djump();
-      spawnParticles(player.x + 10, player.y + player.h, '#74c69d', 8);
+      spawnParticles(player.x + 14, player.y + player.h, '#74c69d', 8);
     }
   }
 
@@ -484,37 +484,38 @@
     }
 
     for (let x = 260; x < cfg.length - 360; x += 270) {
-      const py = (x % 540 === 0) ? 148 : 168;
-      platforms.push({ x, y: py, w: 64, h: 14 });
-      blocks.push({ x: x + 24, y: py - 42, w: 16, h: 16, hit: false, bounce: 0 });
-      seeds.push({ x: x + 10, y: py - 18, collected: false, bob: x * 0.02 });
-      seeds.push({ x: x + 42, y: py - 18, collected: false, bob: x * 0.02 + 1 });
+      const py = (x % 540 === 0) ? 140 : 162;
+      platforms.push({ x, y: py, w: 68, h: 15 });
+      blocks.push({ x: x + 26, y: py - 46, w: 18, h: 18, hit: false, bounce: 0 });
+      seeds.push({ x: x + 10, y: py - 20, collected: false, bob: x * 0.02 });
+      seeds.push({ x: x + 44, y: py - 20, collected: false, bob: x * 0.02 + 1 });
     }
 
     for (let x = 180; x < cfg.length - 300; x += 190) {
       const inPit = pits.some(p => x > p.x - 20 && x < p.x + p.w + 20);
       if (!inPit) {
-        seeds.push({ x, y: GROUND_Y - 22, collected: false, bob: x * 0.05 });
+        seeds.push({ x, y: GROUND_Y - 24, collected: false, bob: x * 0.05 });
       }
     }
 
+    // Obstáculos maiores e mais aparentes para desviar
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone'];
-    for (let x = 340; x < cfg.length - 340; x += Math.round(235 / mult)) {
-      const inPit = pits.some(p => x > p.x - 45 && x < p.x + p.w + 45);
+    for (let x = 360; x < cfg.length - 340; x += Math.round(255 / mult)) {
+      const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
       if (inPit) continue;
       const t = obsTypes[(Math.floor(x / 100) + idx) % obsTypes.length];
       if (t === 'branch_high') {
-        obstacles.push({ type: 'branch', x, y: GROUND_Y - 40, w: 34, h: 16, defeat: false });
-        seeds.push({ x: x + 10, y: GROUND_Y - 16, collected: false, bob: 0 });
+        obstacles.push({ type: 'branch', x, y: GROUND_Y - 54, w: 42, h: 20, defeat: false });
+        seeds.push({ x: x + 13, y: GROUND_Y - 18, collected: false, bob: 0 });
       } else if (t === 'rolling_cone') {
         obstacles.push({
-          type: 'roller', x, y: GROUND_Y - 16, w: 16, h: 16,
-          vx: -48 * mult, baseX: x, defeated: false
+          type: 'roller', x, y: GROUND_Y - 24, w: 24, h: 24,
+          vx: -52 * mult, baseX: x, defeated: false
         });
       } else {
         obstacles.push({
-          type: t, x, y: GROUND_Y - (t === 'cactus' ? 26 : 18),
-          w: t === 'cactus' ? 14 : 22, h: t === 'cactus' ? 26 : 18, defeated: false
+          type: t, x, y: GROUND_Y - (t === 'cactus' ? 34 : 25),
+          w: t === 'cactus' ? 18 : 28, h: t === 'cactus' ? 34 : 25, defeated: false
         });
       }
     }
@@ -554,7 +555,7 @@
     cameraX = 0;
     particles = [];
     player.x = 48;
-    player.y = GROUND_Y - 34;
+    player.y = GROUND_Y - 48;
     player.vx = 0;
     player.vy = 0;
     player.facing = 1;
@@ -587,7 +588,7 @@
     }
 
     const mult = DIFF_MULT[difficulty];
-    const moveSpeed = 145 * mult;
+    const moveSpeed = 150 * mult;
 
     const left = keys['a'] || keys['arrowleft'];
     const right = keys['d'] || keys['arrowright'];
@@ -596,13 +597,13 @@
     if (down && player.onGround) {
       if (!player.crouching) {
         player.crouching = true;
-        player.y += 12;
-        player.h = 22;
+        player.y += 18;
+        player.h = 30;
       }
     } else if (player.crouching) {
       player.crouching = false;
-      player.y -= 12;
-      player.h = 34;
+      player.y -= 18;
+      player.h = 48;
       player.standTimer = 0.16;
     }
 
@@ -662,8 +663,8 @@
         AudioFX.block();
         if (!blk.hit) {
           blk.hit = true;
-          levelData.seeds.push({ x: blk.x + 2, y: blk.y - 18, collected: false, bob: 0 });
-          spawnParticles(blk.x + 8, blk.y, '#ffcf40', 8);
+          levelData.seeds.push({ x: blk.x + 2, y: blk.y - 20, collected: false, bob: 0 });
+          spawnParticles(blk.x + 9, blk.y, '#ffcf40', 8);
         }
       }
     }
@@ -675,13 +676,13 @@
     for (const s of levelData.seeds) {
       if (s.collected) continue;
       s.bob += dt * 5;
-      if (rectsOverlap(player, { x: s.x, y: s.y, w: 14, h: 16 })) {
+      if (rectsOverlap(player, { x: s.x, y: s.y, w: 16, h: 18 })) {
         s.collected = true;
         levelData.collectedInLevel++;
         totalRunSeeds++;
         score += 100;
         AudioFX.seed();
-        spawnParticles(s.x + 7, s.y + 8, '#a7f3d0', 10);
+        spawnParticles(s.x + 8, s.y + 9, '#a7f3d0', 10);
 
         const save = Storage.get();
         save.totalSeeds = (save.totalSeeds || 0) + 1;
@@ -692,8 +693,8 @@
     }
 
     const kickBox = player.attackTimer > 0 ? {
-      x: player.facing === 1 ? player.x + player.w : player.x - 18,
-      y: player.y + 4, w: 18, h: 24
+      x: player.facing === 1 ? player.x + player.w : player.x - 24,
+      y: player.y + 6, w: 24, h: 32
     } : null;
 
     for (const obs of levelData.obstacles) {
@@ -707,17 +708,17 @@
         obs.defeated = true;
         score += 150;
         AudioFX.stomp();
-        spawnParticles(obs.x + 8, obs.y + 8, '#ffcf40', 10);
+        spawnParticles(obs.x + 12, obs.y + 12, '#ffcf40', 10);
         continue;
       }
 
       if (rectsOverlap(player, obs)) {
-        if (obs.type === 'roller' && player.vy > 0 && prevBottom <= obs.y + 8) {
+        if (obs.type === 'roller' && player.vy > 0 && prevBottom <= obs.y + 10) {
           obs.defeated = true;
-          player.vy = -240;
+          player.vy = -255;
           score += 150;
           AudioFX.stomp();
-          spawnParticles(obs.x + 8, obs.y + 8, '#ffcf40', 10);
+          spawnParticles(obs.x + 12, obs.y + 12, '#ffcf40', 10);
         } else {
           damagePlayer(false);
         }
@@ -730,12 +731,12 @@
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
       player.crouching = false;
-      player.h = 34;
-      player.y = GROUND_Y - 34;
+      player.h = 48;
+      player.y = GROUND_Y - 48;
       state = 'DELIVER';
       levelData.deliverTimer = 0;
       AudioFX.win();
-      spawnParticles(levelData.npcX + 10, GROUND_Y - 30, '#ffcf40', 22);
+      spawnParticles(levelData.npcX + 12, GROUND_Y - 36, '#ffcf40', 22);
     }
 
     updateParticles(dt);
@@ -746,7 +747,7 @@
     lives--;
     levelHits++;
     AudioFX.hit();
-    spawnParticles(player.x + 10, player.y + 16, '#ff6b6b', 14);
+    spawnParticles(player.x + 14, player.y + 24, '#ff6b6b', 14);
 
     if (lives <= 0) {
       endGame(false);
@@ -755,7 +756,7 @@
 
     if (fellInPit) {
       player.x = Math.max(40, player.x - 90);
-      player.y = GROUND_Y - 80;
+      player.y = GROUND_Y - 90;
       player.vy = 0;
     }
     player.invulnTimer = 1.5;
@@ -779,6 +780,18 @@
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(mils).padStart(3, '0')}`;
   }
 
+  function drawObstacleHighlighted(spriteKey, obs, borderColor) {
+    // Sombra no chão e contorno de alto contraste para destacar claramente o obstáculo
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(Math.round(obs.x - 2), GROUND_Y - 2, Math.round(obs.w + 4), 4);
+
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(Math.round(obs.x - 1), Math.round(obs.y - 1), Math.round(obs.w + 2), Math.round(obs.h + 2));
+
+    drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h);
+  }
+
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -798,10 +811,14 @@
     ctx.save();
     ctx.translate(-Math.floor(cameraX), 0);
 
+    // Flora e fauna decorativa suavemente recuada para não confundir com obstáculos
+    ctx.save();
+    ctx.globalAlpha = 0.78;
     for (const d of lvl.decors) {
       if (d.x + d.w < cameraX - 20 || d.x > cameraX + canvas.width + 20) continue;
       drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[d.sprite], d.x, d.y - d.h, d.w, d.h);
     }
+    ctx.restore();
 
     const tileW = 32;
     const firstTile = Math.floor(cameraX / tileW) * tileW;
@@ -827,32 +844,34 @@
       ctx.strokeRect(blk.x + 0.5, by + 0.5, blk.w - 1, blk.h - 1);
       if (!blk.hit) {
         ctx.fillStyle = '#fff8d6';
-        ctx.fillRect(blk.x + 6, by + 4, 4, 2);
-        ctx.fillRect(blk.x + 8, by + 6, 2, 3);
-        ctx.fillRect(blk.x + 7, by + 11, 2, 2);
+        ctx.fillRect(blk.x + 7, by + 4, 4, 2);
+        ctx.fillRect(blk.x + 9, by + 6, 2, 4);
+        ctx.fillRect(blk.x + 8, by + 12, 2, 2);
       }
     }
 
     for (const s of lvl.seeds) {
       if (s.collected) continue;
       const offsetY = Math.sin(s.bob) * 2.5;
-      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 14, 16);
+      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 16, 18);
     }
 
+    // Obstáculos e inimigos maiores com destaque visual nítido
     for (const obs of lvl.obstacles) {
       if (obs.defeated) continue;
       if (obs.type === 'branch') {
-        drawSheetRegion(sheets.cerrado, CERRADO_SPRITES.bush, obs.x, obs.y, obs.w, obs.h);
+        drawObstacleHighlighted('bush', obs, '#ffcf40');
       } else if (obs.type === 'roller') {
-        drawSheetRegion(sheets.cerrado, CERRADO_SPRITES.rock, obs.x, obs.y, obs.w, obs.h);
+        drawObstacleHighlighted('rock', obs, '#ff595e');
       } else {
-        drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[obs.type], obs.x, obs.y, obs.w, obs.h);
+        drawObstacleHighlighted(obs.type, obs, '#ff9f1c');
       }
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
-    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 42, 24, 42, true);
+    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 50, 28, 50, true);
 
+    // Mascote Lobo-Guará maior e bem visível
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
       let fIdx = Math.floor(player.animTimer) % frameList.length;
@@ -878,12 +897,12 @@
         frameList = LOBO_FRAMES.walk; fIdx = Math.floor(player.animTimer) % frameList.length;
       }
 
-      const drawH = player.crouching ? 24 : 36;
-      const drawW = player.attackTimer > 0 ? 32 : 24;
+      const drawH = player.crouching ? 34 : 52;
+      const drawW = player.attackTimer > 0 ? 44 : 34;
       drawSheetRegion(
         sheets.lobo,
         frameList[fIdx],
-        player.x - 2,
+        player.x - 3,
         player.y + player.h - drawH,
         drawW,
         drawH,
