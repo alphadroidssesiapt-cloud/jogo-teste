@@ -199,7 +199,7 @@
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], gr = d[i + 1], b = d[i + 2];
       if (type === 'lobo') {
-        if (r > 248 && gr > 248 && b > 248) d[i + 3] = 0;
+        if (r > 245 && gr > 245 && b > 245) d[i + 3] = 0;
       } else if (type === 'seed') {
         if (r > 242 && gr > 242 && b > 242) d[i + 3] = 0;
       } else if (type === 'npc') {
@@ -327,6 +327,7 @@
 
   const AudioFX = (() => {
     let actx = null;
+    let bgmInterval = null;
     function ensure() {
       if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
       if (actx.state === 'suspended') actx.resume();
@@ -353,7 +354,22 @@
       stomp: () => tone(220, 0.12, 'triangle', 0.08, 180),
       block: () => tone(310, 0.09, 'square', 0.06, 120),
       hit: () => tone(130, 0.25, 'sawtooth', 0.08, -80),
-      win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'square', 0.06), i * 110))
+      win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'square', 0.06), i * 110)),
+      startBGM() {
+        ensure();
+        if (bgmInterval) return;
+        const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63];
+        let idx = 0;
+        bgmInterval = setInterval(() => {
+          if (Math.random() < 0.7) {
+            tone(notes[idx % notes.length], 0.25, 'triangle', 0.03);
+          }
+          idx++;
+        }, 320);
+      },
+      stopBGM() {
+        if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
+      }
     };
   })();
 
@@ -361,22 +377,26 @@
     {
       id: 1, name: 'FASE 1-1: CERRADO ABERTO', bgKey: 'bg_day', length: 3200,
       flora: ['ipe_yellow', 'bush', 'cactus'], fauna: ['tatu', 'seriema', 'ave'],
-      mission: 'Conhecendo o lobo-guará: maior canídeo da América do Sul, dispersor natural de sementes do Cerrado.'
+      mission: 'Conhecendo o lobo-guará: maior canídeo da América do Sul, dispersor natural de sementes.',
+      curiosity: 'Sabia que as orelhas compridas do lobo-guará ajudam a dissipar o calor e ouvir presas no capim alto?'
     },
     {
       id: 2, name: 'FASE 1-2: CERRADO DENSO', bgKey: 'bg_sunset', length: 3600,
       flora: ['ipe_pink', 'tree_bent', 'bush'], fauna: ['tatu', 'anta', 'lagarto'],
-      mission: 'Sementes da recuperação: espécies nativas regeneram áreas degradadas e mantêm o solo fértil.'
+      mission: 'Sementes da recuperação: espécies nativas regeneram áreas degradadas.',
+      curiosity: 'O Ipê-amarelo armazena água no tronco e floresce intensamente logo após as primeiras chuvas.'
     },
     {
       id: 3, name: 'FASE 1-3: REGIÃO DE NASCENTES', bgKey: 'bg_rain', length: 4000,
       flora: ['ipe_yellow', 'bush'], fauna: ['capivara', 'sapo', 'ave'],
-      mission: 'Protegendo as nascentes: o Cerrado abastece grandes bacias hidrográficas brasileiras.'
+      mission: 'Protegendo as nascentes: o Cerrado abastece grandes bacias hidrográficas.',
+      curiosity: 'O Cerrado é conhecido como a "Caixa d’Água do Brasil", alimentando oito das doze grandes bacias hidrográficas.'
     },
     {
       id: 4, name: 'FASE 1-4: TRAVESSIA DA FAUNA', bgKey: 'bg_night', length: 4400,
       flora: ['tree_bent', 'cactus'], fauna: ['onca', 'cobra', 'anta'],
-      mission: 'Proteção da fauna: respeitar limites de velocidade e passagens de fauna evita atropelamentos.'
+      mission: 'Proteção da fauna: respeitar limites de velocidade evita atropelamentos nas rodovias.',
+      curiosity: 'Passagens de fauna suspensas e subterrâneas permitem que animais cruzem estradas em segurança.'
     }
   ];
 
@@ -430,8 +450,9 @@
 
   const GROUND_Y = 224;
 
+  // Personagem ajustado para tamanho menor e compacto
   const player = {
-    x: 48, y: GROUND_Y - 64, w: 36, h: 64,
+    x: 48, y: GROUND_Y - 52, w: 28, h: 52,
     vx: 0, vy: 0, facing: 1,
     onGround: false, jumpsLeft: 2,
     crouching: false, attackTimer: 0, invulnTimer: 0,
@@ -469,12 +490,12 @@
       player.onGround = false;
       player.jumpsLeft = 1;
       AudioFX.jump();
-      spawnParticles(player.x + 18, player.y + player.h, '#d8f3dc', 6);
+      spawnParticles(player.x + 14, player.y + player.h, '#d8f3dc', 6);
     } else if (player.jumpsLeft > 0) {
       player.vy = -300;
       player.jumpsLeft = 0;
       AudioFX.djump();
-      spawnParticles(player.x + 18, player.y + player.h, '#74c69d', 8);
+      spawnParticles(player.x + 14, player.y + player.h, '#74c69d', 8);
     }
   }
 
@@ -576,6 +597,7 @@
     totalRunDelivered = 0;
     runStartTime = performance.now();
     elapsedMs = 0;
+    AudioFX.startBGM();
     startLevel(levelIdx);
   }
 
@@ -586,7 +608,7 @@
     cameraX = 0;
     particles = [];
     player.x = 48;
-    player.y = GROUND_Y - 64;
+    player.y = GROUND_Y - 52;
     player.vx = 0;
     player.vy = 0;
     player.facing = 1;
@@ -628,13 +650,13 @@
     if (down && player.onGround) {
       if (!player.crouching) {
         player.crouching = true;
-        player.y += 24;
-        player.h = 40;
+        player.y += 20;
+        player.h = 32;
       }
     } else if (player.crouching) {
       player.crouching = false;
-      player.y -= 24;
-      player.h = 64;
+      player.y -= 20;
+      player.h = 52;
       player.standTimer = 0.16;
     }
 
@@ -762,8 +784,8 @@
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
       player.crouching = false;
-      player.h = 64;
-      player.y = GROUND_Y - 64;
+      player.h = 52;
+      player.y = GROUND_Y - 52;
       state = 'DELIVER';
       levelData.deliverTimer = 0;
       AudioFX.win();
@@ -778,7 +800,7 @@
     lives--;
     levelHits++;
     AudioFX.hit();
-    spawnParticles(player.x + 18, player.y + 32, '#ff6b6b', 14);
+    spawnParticles(player.x + 14, player.y + 26, '#ff6b6b', 14);
 
     if (lives <= 0) {
       endGame(false);
@@ -787,7 +809,7 @@
 
     if (fellInPit) {
       player.x = Math.max(40, player.x - 90);
-      player.y = GROUND_Y - 90;
+      player.y = GROUND_Y - 80;
       player.vy = 0;
     }
     player.invulnTimer = 1.5;
@@ -897,22 +919,22 @@
     drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
 
     if (state === 'DELIVER') {
-      const bx = lvl.npcX - 70;
+      const bx = lvl.npcX - 85;
       const by = GROUND_Y - 95;
       ctx.fillStyle = 'rgba(10, 20, 16, 0.9)';
-      ctx.fillRect(bx, by, 165, 30);
+      ctx.fillRect(bx, by, 195, 30);
       ctx.strokeStyle = '#7ee0b8';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(bx, by, 165, 30);
+      ctx.strokeRect(bx, by, 195, 30);
       ctx.fillStyle = '#fff3b0';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText('Obrigado por ajudar a', bx + 6, by + 12);
-      ctx.fillText('preservar a biodiversidade', bx + 6, by + 22);
+      ctx.font = 'bold 8.55px monospace';
+      ctx.fillText('Missão cumprida!', bx + 6, by + 11);
+      ctx.fillText(lvl.cfg.curiosity.substring(0, 36), bx + 6, by + 22);
     }
 
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
-      let fIdx = 0; // Fixado estaticamente no primeiro quadro quando parado de verdade
+      let fIdx = 0;
 
       if (player.attackTimer > 0) {
         frameList = LOBO_FRAMES.attack;
@@ -935,13 +957,13 @@
         frameList = LOBO_FRAMES.walk; fIdx = Math.floor(player.animTimer) % frameList.length;
       }
 
-      const drawH = player.crouching ? 40 : 68;
-      const drawW = player.attackTimer > 0 ? 54 : 44;
+      const drawH = player.crouching ? 32 : 52;
+      const drawW = player.attackTimer > 0 ? 42 : 34;
       
       drawSheetRegion(
         sheets.lobo,
         frameList[fIdx],
-        player.x - 4,
+        player.x - 3,
         player.y + player.h - drawH,
         drawW,
         drawH,
@@ -1009,11 +1031,12 @@
     if (isLast) {
       Storage.unlockAch('guardian');
       saveRunRecord();
+      AudioFX.stopBGM();
     }
 
     document.getElementById('end-title').textContent = isLast ? 'CERRADO PROTEGIDO!' : `${LEVELS[currentLevelIdx].name} CONCLUÍDA!`;
     document.getElementById('end-content').innerHTML = `
-      <p><strong>Engenheira Ambiental:</strong> "Obrigado por ajudar a preservar a biodiversidade! Cada semente faz a diferença!"</p><br>
+      <p><strong>Engenheira Ambiental:</strong> "${LEVELS[currentLevelIdx].curiosity}"</p><br>
       <p>Sementes Entregues na Fase: <strong>${levelData.collectedInLevel}</strong></p>
       <p>Bônus Sem Colisões: <strong>+${noHitBonus} pts</strong></p>
       <p>Pontuação Total: <strong>${score}</strong></p>
@@ -1027,6 +1050,7 @@
 
   function endGame(won) {
     state = 'END';
+    AudioFX.stopBGM();
     saveRunRecord();
     document.getElementById('end-title').textContent = won ? 'AVENTURA CONCLUÍDA!' : 'FIM DE JOGO';
     document.getElementById('end-content').innerHTML = `
@@ -1089,7 +1113,7 @@
   document.getElementById('btn-play').onclick = () => startRun(0);
   document.getElementById('btn-resume').onclick = () => setPause(false);
   document.getElementById('btn-restart').onclick = () => startLevel(currentLevelIdx);
-  document.getElementById('btn-quit').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
+  document.getElementById('btn-quit').onclick = () => { state = 'MENU'; AudioFX.stopBGM(); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
 
