@@ -86,26 +86,28 @@
       background: #12221b;
       border: 3px solid #3a7a5e;
       box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-      padding: 14px;
+      padding: 16px;
       max-width: 680px;
       width: 92%;
-      max-height: 68%;
+      max-height: 70%;
       overflow-y: auto;
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.5;
       text-align: left;
       margin-bottom: 12px;
     }
     .level-card {
       background: #183327;
       border: 2px solid #52b788;
-      padding: 8px 12px;
-      margin-bottom: 6px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 4px;
       cursor: pointer;
+      border-radius: 2px;
     }
+    .level-card:hover:not(.locked) { background: #224a38; border-color: #9ff5d2; }
     .level-card.locked { opacity: 0.6; cursor: not-allowed; border-color: #2b4a3c; }
     .controls-bar {
       margin-top: 8px;
@@ -249,7 +251,6 @@
     })));
   }
 
-  // Coordenadas estritamente isoladas para cada animação do lobo (evitando sobreposição de bordas)
   const LOBO_FRAMES = {
     idle:   [[0.016, 0.038, 0.072, 0.170], [0.116, 0.038, 0.072, 0.170], [0.216, 0.038, 0.072, 0.170], [0.316, 0.038, 0.072, 0.170]],
     walk:   [[0.512, 0.038, 0.072, 0.170], [0.612, 0.038, 0.072, 0.170], [0.712, 0.038, 0.072, 0.170], [0.812, 0.038, 0.072, 0.170]],
@@ -294,7 +295,7 @@
     point: [0.76, 0.04, 0.22, 0.91]
   };
 
-  function drawSheetRegion(sheet, normRect, dx, dy, dw, dh, flipX = false) {
+  function drawSheetRegion(sheet, normRect, dx, dy, dw, dh, flipX = false, tintOrange = false) {
     if (!sheet) return;
     const [nx, ny, nw, nh] = normRect;
     const sx = Math.floor(nx * sheet.width);
@@ -309,6 +310,10 @@
       ctx.drawImage(sheet, sx, sy, sw, sh, 0, 0, Math.round(dw), Math.round(dh));
     } else {
       ctx.drawImage(sheet, sx, sy, sw, sh, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+    }
+    if (tintOrange) {
+      ctx.fillStyle = 'rgba(230, 110, 20, 0.38)';
+      ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     }
     ctx.restore();
   }
@@ -379,25 +384,25 @@
       id: 1, name: 'FASE 1-1: CERRADO ABERTO', bgKey: 'bg_day', length: 3200,
       flora: ['ipe_yellow', 'bush', 'cactus'], fauna: ['tatu', 'seriema', 'ave'],
       mission: 'Conhecendo o lobo-guará: maior canídeo da América do Sul, dispersor natural de sementes.',
-      curiosity: 'Sabia que as orelhas compridas do lobo-guará ajudam a dissipar o calor e ouvir presas no capim alto?'
+      curiosity: 'Engenheira Ambiental: Sabia que as orelhas compridas do lobo-guará ajudam a dissipar o calor e ouvir presas no capim alto?'
     },
     {
       id: 2, name: 'FASE 1-2: CERRADO DENSO', bgKey: 'bg_sunset', length: 3600,
       flora: ['ipe_pink', 'tree_bent', 'bush'], fauna: ['tatu', 'anta', 'lagarto'],
       mission: 'Sementes da recuperação: espécies nativas regeneram áreas degradadas.',
-      curiosity: 'O Ipê-amarelo armazena água no tronco e floresce intensamente logo após as primeiras chuvas.'
+      curiosity: 'Engenheira Ambiental: O Ipê-amarelo armazena água no tronco e floresce intensamente logo após as primeiras chuvas.'
     },
     {
       id: 3, name: 'FASE 1-3: REGIÃO DE NASCENTES', bgKey: 'bg_rain', length: 4000,
       flora: ['ipe_yellow', 'bush'], fauna: ['capivara', 'sapo', 'ave'],
       mission: 'Protegendo as nascentes: o Cerrado abastece grandes bacias hidrográficas.',
-      curiosity: 'O Cerrado é conhecido como a "Caixa d’Água do Brasil", alimentando oito das doze grandes bacias hidrográficas.'
+      curiosity: 'Engenheira Ambiental: O Cerrado é conhecido como a "Caixa d’Água do Brasil", alimentando oito das doze grandes bacias.'
     },
     {
       id: 4, name: 'FASE 1-4: TRAVESSIA DA FAUNA', bgKey: 'bg_night', length: 4400,
       flora: ['tree_bent', 'cactus'], fauna: ['onca', 'cobra', 'anta'],
       mission: 'Proteção da fauna: respeitar limites de velocidade evita atropelamentos nas rodovias.',
-      curiosity: 'Passagens de fauna suspensas e subterrâneas permitem que animais cruzem estradas em segurança.'
+      curiosity: 'Engenheira Ambiental: Passagens de fauna suspensas e subterrâneas permitem que animais cruzem estradas em segurança.'
     }
   ];
 
@@ -451,7 +456,6 @@
 
   const GROUND_Y = 224;
 
-  // Personagem compactado e proporcional
   const player = {
     x: 48, y: GROUND_Y - 44, w: 22, h: 44,
     vx: 0, vy: 0, facing: 1,
@@ -548,7 +552,6 @@
       }
     }
 
-    // Adicionados obstáculos terrestres e aéreos
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone', 'bird_fly'];
     for (let x = 340; x < cfg.length - 340; x += Math.round(230 / mult)) {
       const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
@@ -562,7 +565,7 @@
         seeds.push({ x: x + 6, y: GROUND_Y - 94, collected: false, bob: 0 });
       } else if (t === 'branch_high') {
         const h = 22;
-        obstacles.push({ type: 'branch', x, y: GROUND_Y - h, w: 44, h: h, defeated: false });
+        obstacles.push({ type: 'branch', x, y: GROUND_Y - h, w: 44, h: h, defeat: false });
         seeds.push({ x: x + 13, y: GROUND_Y - 18, collected: false, bob: 0 });
       } else if (t === 'rolling_cone') {
         const h = 26;
@@ -914,24 +917,32 @@
       else if (obs.type === 'roller') spriteKey = 'rock';
       else if (obs.type === 'bird') spriteKey = 'ave';
 
-      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h);
+      // Pássaros ganham coloração alaranjada destacada nas asas/corpo
+      const isBird = obs.type === 'bird';
+      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, isBird);
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
     drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
 
     if (state === 'DELIVER') {
-      const bx = lvl.npcX - 85;
-      const by = GROUND_Y - 95;
-      ctx.fillStyle = 'rgba(10, 20, 16, 0.9)';
-      ctx.fillRect(bx, by, 195, 30);
+      const bx = lvl.npcX - 110;
+      const by = GROUND_Y - 112;
+      ctx.fillStyle = 'rgba(10, 20, 16, 0.94)';
+      ctx.fillRect(bx, by, 240, 42);
       ctx.strokeStyle = '#7ee0b8';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(bx, by, 195, 30);
+      ctx.strokeRect(bx, by, 240, 42);
+      ctx.fillStyle = '#ffcf40';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText('Engenharia Ambiental relata:', bx + 8, by + 13);
       ctx.fillStyle = '#fff3b0';
-      ctx.font = 'bold 8.55px monospace';
-      ctx.fillText('Missão cumprida!', bx + 6, by + 11);
-      ctx.fillText(lvl.cfg.curiosity.substring(0, 36), bx + 6, by + 22);
+      ctx.font = '8px monospace';
+      const curText = lvl.cfg.curiosity.replace('Engenheira Ambiental: ', '');
+      ctx.fillText(curText.substring(0, 42), bx + 8, by + 25);
+      if (curText.length > 42) {
+        ctx.fillText(curText.substring(42, 84), bx + 8, by + 35);
+      }
     }
 
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
@@ -1119,18 +1130,22 @@
   document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
 
+  // Menu de seleção de fases remodelado no estilo de balão de fala da Engenheira Ambiental
   document.getElementById('btn-levels').onclick = () => {
     const save = Storage.get();
     const cards = LEVELS.map((l, idx) => {
       const unlocked = (idx + 1) <= save.unlockedLevel;
       return `
         <div class="level-card ${unlocked ? '' : 'locked'}" ${unlocked ? `onclick="window.__selectLevel(${idx})"` : ''}>
-          <span>${unlocked ? '🌿' : '🔒'} <strong>${l.name}</strong></span>
-          <span>${unlocked ? '▶ JOGAR' : 'BLOQUEADA'}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span>${unlocked ? '🌿' : '🔒'} <strong>${l.name}</strong></span>
+            <span style="color:${unlocked ? '#ffcf40' : '#7a998b'};font-size:11px;">${unlocked ? '▶ JOGAR' : 'BLOQUEADA'}</span>
+          </div>
+          <p style="font-size:11px;color:#a7f3d0;margin-top:2px;">"Engenheira: ${l.curiosity.replace('Engenheira Ambiental: ', '')}"</p>
         </div>
       `;
     }).join('');
-    openSubMenu('SELEÇÃO DE FASES', cards);
+    openSubMenu('RELATÓRIO DE FASES & DIÁLOGOS', cards);
   };
   window.__selectLevel = (idx) => startRun(idx);
 
