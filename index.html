@@ -164,7 +164,24 @@ body { min-height:100dvh; height:auto; overflow:auto; padding:8px; padding-botto
 body:has(#touch-controls.active) #game-shell {width:min(96vw,960px,calc((100dvh - 112px)*16/9));}
 body:has(#touch-controls.active) #info-controls {display:none;}
 @media (orientation:portrait) { #game-shell,body:has(#touch-controls.active) #game-shell {width:96vw;} #touch-controls.active {grid-template-columns:repeat(3,minmax(0,1fr));} .overlay {padding:6px;} .panel-box {font-size:11px;padding:6px;} }
-  </style>
+  
+#game-shell {container-type:inline-size;}
+#menu-main button:hover,#menu-main button:focus-visible,#menu-main .mode-btn:hover {opacity:1;background:rgba(255,218,0,.48);color:transparent;border:2px solid #ffe66d;border-radius:10px;box-shadow:0 0 12px #ffc400;transform:none;}
+#menu-end {padding:0;background-size:100% 100%;background-repeat:no-repeat;container-type:inline-size;}
+#menu-end.defeat {background-image:url("assets/Game Over_ Lobo Sob o Luar-2.png");}
+#menu-end.victory {background-image:url("assets/Tela de Vitória com Lobo e Louros-1.png");}
+#menu-end #end-title {position:absolute;margin:0;left:20%;width:60%;top:54%;font-size:3cqw;line-height:1.1;color:#ffe79a;text-shadow:2px 2px #241039;letter-spacing:0;}
+#menu-end #end-content {position:absolute;left:22%;width:56%;top:62%;height:10%;max-height:none;margin:0;padding:0;background:none;border:0;box-shadow:none;text-align:center;font-size:1.5cqw;line-height:1.3;color:white;overflow:auto;}
+#menu-end .menu-grid {position:absolute;inset:0;display:block;margin:0;pointer-events:none;}
+#menu-end .menu-grid button {position:absolute;pointer-events:auto;top:79%;height:11%;width:24%;left:24.5%;padding:0;font-size:1.8cqw;line-height:1.1;background:transparent;border:0;box-shadow:none;color:white;text-shadow:2px 2px #210c36;transform:none;border-radius:12px;}
+#menu-end #btn-end-menu {left:51.5%;}
+#menu-end .menu-grid button:hover,#menu-end .menu-grid button:focus-visible {background:#ffcf40;color:#291536;text-shadow:none;outline:2px solid #fff0a0;}
+#menu-end.defeat #end-title {top:72%;font-size:3cqw;}
+#menu-end.defeat #end-content {top:38%;left:9%;width:21%;height:20%;font-size:1.65cqw;background:rgba(8,12,40,.7);border-radius:8px;padding:1%;}
+#menu-end.defeat .menu-grid button {top:81%;height:6.5%;background:#62268e;border:2px solid #d578ed;}
+#menu-end.defeat .menu-grid button:hover {background:#ffcf40;}
+
+</style>
 </head>
 <body>
   <div id="game-shell">
@@ -1144,9 +1161,11 @@ body:has(#touch-controls.active) #info-controls {display:none;}
       AudioFX.stopBGM();
     }
 
+    document.getElementById('menu-end').classList.remove('defeat');
+    document.getElementById('menu-end').classList.add('victory');
     document.getElementById('end-title').textContent = isLast ? 'CERRADO PROTEGIDO!' : `${LEVELS[currentLevelIdx].name} CONCLUÍDA!`;
     document.getElementById('end-content').innerHTML = `
-      <p><strong>Engenheira Ambiental:</strong> "${LEVELS[currentLevelIdx].curiosity}"</p><br>
+      <p title="Engenheira Ambiental">${LEVELS[currentLevelIdx].curiosity}</p>
       <p>Sementes Entregues na Fase: <strong>${levelData.collectedInLevel}</strong></p>
       <p>Bônus Sem Colisões: <strong>+${noHitBonus} pts</strong></p>
       <p>Pontuação Total: <strong>${score}</strong></p>
@@ -1163,6 +1182,8 @@ body:has(#touch-controls.active) #info-controls {display:none;}
     document.getElementById('touch-controls').classList.remove('active');
     AudioFX.stopBGM();
     saveRunRecord(false);
+    document.getElementById('menu-end').classList.toggle('victory', won);
+    document.getElementById('menu-end').classList.toggle('defeat', !won);
     document.getElementById('end-title').textContent = won ? 'AVENTURA CONCLUÍDA!' : 'FIM DE JOGO';
     document.getElementById('end-content').innerHTML = `
       <p>Pontuação Final: <strong>${score}</strong></p>
