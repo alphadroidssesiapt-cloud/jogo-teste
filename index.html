@@ -296,6 +296,36 @@
     ctx.restore();
   }
 
+  // Função para desenhar a silhueta com contorno exato em volta do sprite
+  function drawOutlinedSprite(sheet, normRect, dx, dy, dw, dh, flipX = false, outlineColor = '#ffcf40') {
+    if (!sheet) return;
+    const [nx, ny, nw, nh] = normRect;
+    const sx = Math.floor(nx * sheet.width);
+    const sy = Math.floor(ny * sheet.height);
+    const sw = Math.floor(nw * sheet.width);
+    const sh = Math.floor(nh * sheet.height);
+
+    ctx.save();
+    // Desenha o contorno deslocando nas 4 direções cardinais
+    const offsets = [[-1,0], [1,0], [0,-1], [0,1]];
+    ctx.fillStyle = outlineColor;
+    for (const [ox, oy] of offsets) {
+      if (flipX) {
+        ctx.save();
+        ctx.translate(Math.round(dx + dw + ox), Math.round(dy + oy));
+        ctx.scale(-1, 1);
+        ctx.drawImage(sheet, sx, sy, sw, sh, 0, 0, Math.round(dw), Math.round(dh));
+        ctx.restore();
+      } else {
+        ctx.drawImage(sheet, sx, sy, sw, sh, Math.round(dx + ox), Math.round(dy + oy), Math.round(dw), Math.round(dh));
+      }
+    }
+    ctx.restore();
+
+    // Desenha o sprite original por cima mantendo a aparência intacta
+    drawSheetRegion(sheet, normRect, dx, dy, dw, dh, flipX);
+  }
+
   const AudioFX = (() => {
     let actx = null;
     function ensure() {
@@ -401,9 +431,9 @@
 
   const GROUND_Y = 224;
 
-  // Personagem maior (tamanho visível e hitbox bem definidos)
+  // Personagem com tamanho otimizado e visível
   const player = {
-    x: 48, y: GROUND_Y - 56, w: 32, h: 56,
+    x: 48, y: GROUND_Y - 54, w: 32, h: 54,
     vx: 0, vy: 0, facing: 1,
     onGround: false, jumpsLeft: 2,
     crouching: false, attackTimer: 0, invulnTimer: 0,
@@ -437,13 +467,13 @@
 
   function tryJump() {
     if (player.onGround) {
-      player.vy = -345;
+      player.vy = -340;
       player.onGround = false;
       player.jumpsLeft = 1;
       AudioFX.jump();
       spawnParticles(player.x + 16, player.y + player.h, '#d8f3dc', 6);
     } else if (player.jumpsLeft > 0) {
-      player.vy = -300;
+      player.vy = -295;
       player.jumpsLeft = 0;
       AudioFX.djump();
       spawnParticles(player.x + 16, player.y + player.h, '#74c69d', 8);
@@ -484,48 +514,47 @@
     }
 
     for (let x = 260; x < cfg.length - 360; x += 270) {
-      const py = (x % 540 === 0) ? 138 : 160;
-      platforms.push({ x, y: py, w: 72, h: 16 });
-      blocks.push({ x: x + 27, y: py - 48, w: 18, h: 18, hit: false, bounce: 0 });
+      const py = (x % 540 === 0) ? 140 : 162;
+      platforms.push({ x, y: py, w: 70, h: 16 });
+      blocks.push({ x: x + 26, y: py - 46, w: 18, h: 18, hit: false, bounce: 0 });
       seeds.push({ x: x + 10, y: py - 20, collected: false, bob: x * 0.02 });
-      seeds.push({ x: x + 46, y: py - 20, collected: false, bob: x * 0.02 + 1 });
+      seeds.push({ x: x + 44, y: py - 20, collected: false, bob: x * 0.02 + 1 });
     }
 
     for (let x = 180; x < cfg.length - 300; x += 190) {
       const inPit = pits.some(p => x > p.x - 20 && x < p.x + p.w + 20);
       if (!inPit) {
-        seeds.push({ x, y: GROUND_Y - 26, collected: false, bob: x * 0.05 });
+        seeds.push({ x, y: GROUND_Y - 24, collected: false, bob: x * 0.05 });
       }
     }
 
-    // Obstáculos maiores e perfeitamente aparentes
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone'];
     for (let x = 360; x < cfg.length - 340; x += Math.round(255 / mult)) {
       const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
       if (inPit) continue;
       const t = obsTypes[(Math.floor(x / 100) + idx) % obsTypes.length];
       if (t === 'branch_high') {
-        obstacles.push({ type: 'branch', x, y: GROUND_Y - 60, w: 46, h: 22, defeat: false });
-        seeds.push({ x: x + 14, y: GROUND_Y - 20, collected: false, bob: 0 });
+        obstacles.push({ type: 'branch', x, y: GROUND_Y - 56, w: 42, h: 20, defeat: false });
+        seeds.push({ x: x + 13, y: GROUND_Y - 18, collected: false, bob: 0 });
       } else if (t === 'rolling_cone') {
         obstacles.push({
-          type: 'roller', x, y: GROUND_Y - 26, w: 26, h: 26,
+          type: 'roller', x, y: GROUND_Y - 24, w: 24, h: 24,
           vx: -52 * mult, baseX: x, defeated: false
         });
       } else {
         obstacles.push({
-          type: t, x, y: GROUND_Y - (t === 'cactus' ? 38 : 28),
-          w: t === 'cactus' ? 20 : 30, h: t === 'cactus' ? 38 : 28, defeated: false
+          type: t, x, y: GROUND_Y - (t === 'cactus' ? 34 : 26),
+          w: t === 'cactus' ? 18 : 28, h: t === 'cactus' ? 34 : 26, defeated: false
         });
       }
     }
 
     for (let x = 90; x < cfg.length - 200; x += 175) {
       const fl = cfg.flora[Math.floor(x / 175) % cfg.flora.length];
-      decors.push({ sprite: fl, x, y: GROUND_Y, w: fl === 'bush' ? 30 : 48, h: fl === 'bush' ? 24 : 56 });
+      decors.push({ sprite: fl, x, y: GROUND_Y, w: fl === 'bush' ? 28 : 46, h: fl === 'bush' ? 22 : 54 });
       if ((x / 175) % 2 === 1) {
         const fa = cfg.fauna[Math.floor(x / 350) % cfg.fauna.length];
-        decors.push({ sprite: fa, x: x + 58, y: GROUND_Y, w: 30, h: 24 });
+        decors.push({ sprite: fa, x: x + 58, y: GROUND_Y, w: 28, h: 22 });
       }
     }
 
@@ -555,7 +584,7 @@
     cameraX = 0;
     particles = [];
     player.x = 48;
-    player.y = GROUND_Y - 56;
+    player.y = GROUND_Y - 54;
     player.vx = 0;
     player.vy = 0;
     player.facing = 1;
@@ -597,13 +626,13 @@
     if (down && player.onGround) {
       if (!player.crouching) {
         player.crouching = true;
-        player.y += 22;
+        player.y += 20;
         player.h = 34;
       }
     } else if (player.crouching) {
       player.crouching = false;
-      player.y -= 22;
-      player.h = 56;
+      player.y -= 20;
+      player.h = 54;
       player.standTimer = 0.16;
     }
 
@@ -663,7 +692,7 @@
         AudioFX.block();
         if (!blk.hit) {
           blk.hit = true;
-          levelData.seeds.push({ x: blk.x + 3, y: blk.y - 20, collected: false, bob: 0 });
+          levelData.seeds.push({ x: blk.x + 2, y: blk.y - 20, collected: false, bob: 0 });
           spawnParticles(blk.x + 9, blk.y, '#ffcf40', 8);
         }
       }
@@ -676,13 +705,13 @@
     for (const s of levelData.seeds) {
       if (s.collected) continue;
       s.bob += dt * 5;
-      if (rectsOverlap(player, { x: s.x, y: s.y, w: 18, h: 20 })) {
+      if (rectsOverlap(player, { x: s.x, y: s.y, w: 16, h: 18 })) {
         s.collected = true;
         levelData.collectedInLevel++;
         totalRunSeeds++;
         score += 100;
         AudioFX.seed();
-        spawnParticles(s.x + 9, s.y + 10, '#a7f3d0', 10);
+        spawnParticles(s.x + 8, s.y + 9, '#a7f3d0', 10);
 
         const save = Storage.get();
         save.totalSeeds = (save.totalSeeds || 0) + 1;
@@ -693,8 +722,8 @@
     }
 
     const kickBox = player.attackTimer > 0 ? {
-      x: player.facing === 1 ? player.x + player.w : player.x - 26,
-      y: player.y + 6, w: 26, h: 36
+      x: player.facing === 1 ? player.x + player.w : player.x - 24,
+      y: player.y + 6, w: 24, h: 34
     } : null;
 
     for (const obs of levelData.obstacles) {
@@ -708,17 +737,17 @@
         obs.defeated = true;
         score += 150;
         AudioFX.stomp();
-        spawnParticles(obs.x + 13, obs.y + 13, '#ffcf40', 10);
+        spawnParticles(obs.x + 12, obs.y + 12, '#ffcf40', 10);
         continue;
       }
 
       if (rectsOverlap(player, obs)) {
         if (obs.type === 'roller' && player.vy > 0 && prevBottom <= obs.y + 10) {
           obs.defeated = true;
-          player.vy = -265;
+          player.vy = -260;
           score += 150;
           AudioFX.stomp();
-          spawnParticles(obs.x + 13, obs.y + 13, '#ffcf40', 10);
+          spawnParticles(obs.x + 12, obs.y + 12, '#ffcf40', 10);
         } else {
           damagePlayer(false);
         }
@@ -731,12 +760,12 @@
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
       player.crouching = false;
-      player.h = 56;
-      player.y = GROUND_Y - 56;
+      player.h = 54;
+      player.y = GROUND_Y - 54;
       state = 'DELIVER';
       levelData.deliverTimer = 0;
       AudioFX.win();
-      spawnParticles(levelData.npcX + 14, GROUND_Y - 40, '#ffcf40', 22);
+      spawnParticles(levelData.npcX + 12, GROUND_Y - 38, '#ffcf40', 22);
     }
 
     updateParticles(dt);
@@ -747,7 +776,7 @@
     lives--;
     levelHits++;
     AudioFX.hit();
-    spawnParticles(player.x + 16, player.y + 28, '#ff6b6b', 14);
+    spawnParticles(player.x + 14, player.y + 26, '#ff6b6b', 14);
 
     if (lives <= 0) {
       endGame(false);
@@ -780,18 +809,6 @@
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(mils).padStart(3, '0')}`;
   }
 
-  // Renderizador para deixar o obstáculo super aparente com contorno forte
-  function drawHighlightedObstacle(spriteKey, obs, borderColor) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(Math.round(obs.x - 3), GROUND_Y - 2, Math.round(obs.w + 6), 5);
-
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(Math.round(obs.x - 2), Math.round(obs.y - 2), Math.round(obs.w + 4), Math.round(obs.h + 4));
-
-    drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h);
-  }
-
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -803,8 +820,8 @@
     drawSheetRegion(sheets.cerrado, bgNorm, -parallaxOffset, 0, bgW, GROUND_Y);
     drawSheetRegion(sheets.cerrado, bgNorm, bgW - parallaxOffset, 0, bgW, GROUND_Y);
 
-    // Efeito de fundo borrado/escurecido para dar foco total ao gameplay
-    ctx.fillStyle = 'rgba(10, 24, 18, 0.32)';
+    // Fundo levemente borrado/escurecido para destacar a jogabilidade
+    ctx.fillStyle = 'rgba(10, 22, 16, 0.35)';
     ctx.fillRect(0, 0, canvas.width, GROUND_Y);
 
     if (lvl.cfg.id === 3) {
@@ -815,9 +832,8 @@
     ctx.save();
     ctx.translate(-Math.floor(cameraX), 0);
 
-    // Decoração de flora/fauna de fundo mais suave (borrada esteticamente)
     ctx.save();
-    ctx.globalAlpha = 0.68;
+    ctx.globalAlpha = 0.7;
     for (const d of lvl.decors) {
       if (d.x + d.w < cameraX - 20 || d.x > cameraX + canvas.width + 20) continue;
       drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[d.sprite], d.x, d.y - d.h, d.w, d.h);
@@ -857,25 +873,28 @@
     for (const s of lvl.seeds) {
       if (s.collected) continue;
       const offsetY = Math.sin(s.bob) * 2.5;
-      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 18, 20);
+      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 16, 18);
     }
 
-    // Obstáculos e inimigos destacados com contorno de alta visibilidade
+    // Obstáculos e inimigos com contorno nítido na silhueta
     for (const obs of lvl.obstacles) {
       if (obs.defeated) continue;
+      let spriteKey = obs.type;
+      let outlineColor = '#ff9f1c';
       if (obs.type === 'branch') {
-        drawHighlightedObstacle('bush', obs, '#ffcf40');
+        spriteKey = 'bush';
+        outlineColor = '#ffcf40';
       } else if (obs.type === 'roller') {
-        drawHighlightedObstacle('rock', obs, '#ff3366');
-      } else {
-        drawHighlightedObstacle(obs.type, obs, '#ff9f1c');
+        spriteKey = 'rock';
+        outlineColor = '#ff3366';
       }
+      drawOutlinedSprite(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, outlineColor);
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
-    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
+    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 54, 30, 54, true);
 
-    // Personagem Lobo-Guará grande, destacado e com contorno nítido
+    // Personagem Lobo-Guará com contorno exato na silhueta
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
       let fIdx = Math.floor(player.animTimer) % frameList.length;
@@ -901,22 +920,18 @@
         frameList = LOBO_FRAMES.walk; fIdx = Math.floor(player.animTimer) % frameList.length;
       }
 
-      const drawH = player.crouching ? 38 : 60;
-      const drawW = player.attackTimer > 0 ? 48 : 40;
+      const drawH = player.crouching ? 36 : 58;
+      const drawW = player.attackTimer > 0 ? 46 : 38;
       
-      // Contorno em volta do personagem para máxima visibilidade
-      ctx.strokeStyle = '#00ffff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(Math.round(player.x - 4), Math.round(player.y + player.h - drawH - 2), Math.round(drawW + 4), Math.round(drawH + 2));
-
-      drawSheetRegion(
+      drawOutlinedSprite(
         sheets.lobo,
         frameList[fIdx],
-        player.x - 4,
+        player.x - 3,
         player.y + player.h - drawH,
         drawW,
         drawH,
-        player.facing === -1
+        player.facing === -1,
+        '#00ffff'
       );
     }
 
@@ -1004,7 +1019,6 @@
     const btnNext = document.getElementById('btn-next');
     btnNext.textContent = 'TENTAR NOVAMENTE';
     btnNext.onclick = () => startRun(currentLevelIdx);
-    document.getElementById('menu-end').classList.add('hidden');
     document.getElementById('menu-end').classList.remove('hidden');
   }
 
