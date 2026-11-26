@@ -668,23 +668,13 @@
           vx: -52 * mult, baseX: x, anim: 0, defeated: false
         });
       } else if (t === 'cactus') {
-        const h = 38;
-        obstacles.push({ type: t, x, y: GROUND_Y - h, w: 20, h: h, defeated: false });
+        continue; // Apenas os cactos naturais do panorama publicado.
       } else {
         const h = t === 'rock' ? 28 : 24;
         obstacles.push({ type: t, x, y: GROUND_Y - h, w: 30, h: h, defeated: false });
       }
     }
 
-    for (let x = 90; x < cfg.length - 200; x += 175) {
-      const fl = cfg.flora[Math.floor(x / 175) % cfg.flora.length];
-      const fh = fl === 'bush' ? 22 : 54;
-      decors.push({ sprite: fl, x, y: GROUND_Y - fh, w: fl === 'bush' ? 28 : 46, h: fh });
-      if (Math.floor(x / 175) % 2 === 1) {
-        const fa = cfg.fauna[Math.floor(x / 350) % cfg.fauna.length];
-        decors.push({ sprite: fa, x: x + 58, y: GROUND_Y - 22, w: 28, h: 22 });
-      }
-    }
 
     return {
       cfg, pits, platforms, blocks, seeds, obstacles, decors,
