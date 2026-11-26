@@ -2,10 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>ALERTA FAUNA: Aventura pelo Cerrado</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
     body {
       background: #0d1612;
       color: #f4f7f2;
@@ -24,6 +24,7 @@
       border: 4px solid #2e5a44;
       box-shadow: 0 18px 50px rgba(0,0,0,0.75);
       background: #1a2e24;
+      overflow: hidden;
     }
     canvas {
       width: 100%;
@@ -35,7 +36,7 @@
     .overlay {
       position: absolute;
       inset: 0;
-      background: rgba(10, 20, 16, 0.88);
+      background: rgba(10, 20, 16, 0.92);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -46,22 +47,22 @@
     }
     .hidden { display: none !important; }
     h1 {
-      font-size: clamp(20px, 3.4vw, 34px);
+      font-size: clamp(18px, 3.2vw, 32px);
       color: #ffcf40;
       text-shadow: 3px 3px 0 #1b3b2b;
       letter-spacing: 2px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     h2 {
-      font-size: clamp(12px, 1.8vw, 17px);
+      font-size: clamp(11px, 1.6vw, 16px);
       color: #7ee0b8;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
     .menu-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(140px, 190px));
+      grid-template-columns: repeat(2, minmax(130px, 180px));
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 6px;
     }
     button {
       background: #238b68;
@@ -70,7 +71,7 @@
       padding: 8px 12px;
       font-family: inherit;
       font-weight: bold;
-      font-size: clamp(11px, 1.4vw, 14px);
+      font-size: clamp(11px, 1.3vw, 13px);
       cursor: pointer;
       text-transform: uppercase;
       box-shadow: 0 3px 0 #0f4734;
@@ -80,30 +81,32 @@
     button:active { transform: translateY(2px); box-shadow: none; }
     button.secondary { background: #284639; border-color: #6ea88f; }
     button:disabled { background: #1b2e25; border-color: #3b5c4c; color: #5c8573; cursor: not-allowed; box-shadow: none; transform: none; }
-    .diff-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .mode-row { display: flex; gap: 8px; margin-bottom: 6px; }
+    .mode-btn.active { background: #e09f1f; border-color: #fff3b0; color: #1b1400; }
+    .diff-row { display: flex; gap: 6px; margin-bottom: 6px; }
     .diff-btn.active { background: #e09f1f; border-color: #fff3b0; color: #1b1400; }
     .panel-box {
       background: #12221b;
       border: 3px solid #3a7a5e;
       box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-      padding: 16px;
+      padding: 14px;
       max-width: 680px;
       width: 92%;
-      max-height: 70%;
+      max-height: 65%;
       overflow-y: auto;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 12.5px;
+      line-height: 1.45;
       text-align: left;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .level-card {
       background: #183327;
       border: 2px solid #52b788;
-      padding: 10px 14px;
-      margin-bottom: 8px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
       cursor: pointer;
       border-radius: 2px;
     }
@@ -113,16 +116,64 @@
       margin-top: 8px;
       font-size: 12px;
       color: #9ec4b3;
+      text-align: center;
     }
+
+    /* Botões Virtuais para Celular */
+    #touch-controls {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
+    }
+    #touch-controls.active { display: block; }
+    .t-btn {
+      position: absolute;
+      background: rgba(35, 139, 104, 0.45);
+      border: 2px solid rgba(159, 245, 210, 0.7);
+      color: #fff;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      pointer-events: auto;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+    .t-btn:active { background: rgba(44, 168, 126, 0.75); }
+    #btn-left { left: 16px; bottom: 16px; width: 56px; height: 56px; }
+    #btn-right { left: 82px; bottom: 16px; width: 56px; height: 56px; }
+    #btn-down { left: 148px; bottom: 16px; width: 56px; height: 56px; }
+    #btn-jump { right: 16px; bottom: 16px; width: 64px; height: 64px; border-radius: 50%; background: rgba(224, 159, 31, 0.55); border-color: #ffe66d; }
+    #btn-attack { right: 92px; bottom: 24px; width: 52px; height: 52px; border-radius: 50%; background: rgba(230, 80, 80, 0.55); border-color: #ff9999; }
+    #btn-pause-mob { top: 12px; right: 12px; width: 40px; height: 32px; font-size: 12px; pointer-events: auto; }
   </style>
 </head>
 <body>
   <div id="game-shell">
     <canvas id="gameCanvas" width="480" height="270"></canvas>
 
+    <!-- Controles Virtuais de Celular -->
+    <div id="touch-controls">
+      <div id="btn-left" class="t-btn">◀</div>
+      <div id="btn-right" class="t-btn">▶</div>
+      <div id="btn-down" class="t-btn">▼</div>
+      <div id="btn-jump" class="t-btn">PULA</div>
+      <div id="btn-attack" class="t-btn">CHUTE</div>
+      <div id="btn-pause-mob" class="t-btn">⏸</div>
+    </div>
+
     <div id="menu-main" class="overlay">
       <h1>ALERTA FAUNA</h1>
       <h2>AVENTURA PELO CERRADO</h2>
+      <div style="margin-bottom:4px; font-size:11px; color:#7ee0b8;">MODO DE JOGO:</div>
+      <div class="mode-row">
+        <button class="mode-btn active" data-mode="pc">💻 PC (TECLADO)</button>
+        <button class="mode-btn" data-mode="celular">📱 CELULAR (TELA)</button>
+      </div>
       <div class="diff-row">
         <button class="diff-btn" data-diff="facil">FÁCIL</button>
         <button class="diff-btn active" data-diff="normal">NORMAL</button>
@@ -162,7 +213,7 @@
       </div>
     </div>
   </div>
-  <div class="controls-bar">
+  <div id="info-controls" class="controls-bar">
     [A/D] Mover &nbsp;|&nbsp; [W / ESPAÇO / BACKSPACE] Pular &amp; Pulo Duplo &nbsp;|&nbsp; [S] Agachar &nbsp;|&nbsp; [J / Z] Chute &nbsp;|&nbsp; [P] Pausar
   </div>
 
@@ -171,6 +222,8 @@
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
+
+  let playMode = 'pc'; // 'pc' ou 'celular'
 
   const rawSources = {
     lobo: 'assets/Sprite Sheet de Lobo em Ação.png',
@@ -465,6 +518,30 @@
   };
 
   const keys = {};
+
+  // Handlers para os botões virtuais de toque do Celular
+  const touchState = { left: false, right: false, down: false };
+
+  function bindTouchButton(id, keyName) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); touchState[keyName] = true; if (keyName === 'jump') tryJump(); if (keyName === 'attack') tryAttack(); }, {passive: false});
+    el.addEventListener('touchend', (e) => { e.preventDefault(); touchState[keyName] = false; }, {passive: false});
+    el.addEventListener('mousedown', (e) => { e.preventDefault(); touchState[keyName] = true; if (keyName === 'jump') tryJump(); if (keyName === 'attack') tryAttack(); });
+    el.addEventListener('mouseup', (e) => { e.preventDefault(); touchState[keyName] = false; });
+  }
+
+  bindTouchButton('btn-left', 'left');
+  bindTouchButton('btn-right', 'right');
+  bindTouchButton('btn-down', 'down');
+  bindTouchButton('btn-jump', 'jump');
+  bindTouchButton('btn-attack', 'attack');
+
+  document.getElementById('btn-pause-mob').onclick = () => {
+    if (state === 'PLAY') setPause(true);
+    else if (state === 'PAUSE') setPause(false);
+  };
+
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'backspace'].includes(k)) {
@@ -629,6 +706,9 @@
     player.invulnTimer = 0;
     hideAllMenus();
     state = 'PLAY';
+    if (playMode === 'celular') {
+      document.getElementById('touch-controls').classList.add('active');
+    }
   }
 
   function rectsOverlap(a, b) {
@@ -643,6 +723,7 @@
     }
 
     if (state === 'DELIVER') {
+      document.getElementById('touch-controls').classList.remove('active');
       levelData.deliverTimer += dt;
       if (levelData.deliverTimer > 2.2) {
         finishLevelDialog();
@@ -654,9 +735,9 @@
     const mult = DIFF_MULT[difficulty];
     const moveSpeed = 160 * mult;
 
-    const left = keys['a'] || keys['arrowleft'];
-    const right = keys['d'] || keys['arrowright'];
-    const down = keys['s'] || keys['arrowdown'];
+    const left = keys['a'] || keys['arrowleft'] || touchState.left;
+    const right = keys['d'] || keys['arrowright'] || touchState.right;
+    const down = keys['s'] || keys['arrowdown'] || touchState.down;
 
     if (down && player.onGround) {
       if (!player.crouching) {
@@ -917,7 +998,6 @@
       else if (obs.type === 'roller') spriteKey = 'rock';
       else if (obs.type === 'bird') spriteKey = 'ave';
 
-      // Pássaros ganham coloração alaranjada destacada nas asas/corpo
       const isBird = obs.type === 'bird';
       drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, isBird);
     }
@@ -1063,6 +1143,7 @@
 
   function endGame(won) {
     state = 'END';
+    document.getElementById('touch-controls').classList.remove('active');
     AudioFX.stopBGM();
     saveRunRecord();
     document.getElementById('end-title').textContent = won ? 'AVENTURA CONCLUÍDA!' : 'FIM DE JOGO';
@@ -1101,9 +1182,11 @@
   function setPause(paused) {
     if (paused) {
       state = 'PAUSE';
+      document.getElementById('touch-controls').classList.remove('active');
       document.getElementById('menu-pause').classList.remove('hidden');
     } else {
       state = 'PLAY';
+      if (playMode === 'celular') document.getElementById('touch-controls').classList.add('active');
       document.getElementById('menu-pause').classList.add('hidden');
     }
   }
@@ -1114,6 +1197,21 @@
     document.getElementById('sub-content').innerHTML = html;
     document.getElementById('menu-sub').classList.remove('hidden');
   }
+
+  // Seleção de Modo (PC ou Celular)
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      playMode = btn.dataset.mode;
+      const infoBar = document.getElementById('info-controls');
+      if (playMode === 'celular') {
+        infoBar.textContent = 'Modo Celular Ativado: Utilize os botões virtuais na tela.';
+      } else {
+        infoBar.textContent = '[A/D] Mover | [W/Espaço] Pular | [S] Agachar | [J/Z] Chute | [P] Pausar';
+      }
+    };
+  });
 
   document.querySelectorAll('.diff-btn').forEach(btn => {
     btn.onclick = () => {
@@ -1126,11 +1224,10 @@
   document.getElementById('btn-play').onclick = () => startRun(0);
   document.getElementById('btn-resume').onclick = () => setPause(false);
   document.getElementById('btn-restart').onclick = () => startLevel(currentLevelIdx);
-  document.getElementById('btn-quit').onclick = () => { state = 'MENU'; AudioFX.stopBGM(); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
-  document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
+  document.getElementById('btn-quit').onclick = () => { state = 'MENU'; document.getElementById('touch-controls').classList.remove('active'); AudioFX.stopBGM(); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
+  document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; document.getElementById('touch-controls').classList.remove('active'); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
 
-  // Menu de seleção de fases remodelado no estilo de balão de fala da Engenheira Ambiental
   document.getElementById('btn-levels').onclick = () => {
     const save = Storage.get();
     const cards = LEVELS.map((l, idx) => {
@@ -1151,11 +1248,9 @@
 
   document.getElementById('btn-howto').onclick = () => {
     openSubMenu('COMO JOGAR', `
-      <p><strong>A / D ou Setas:</strong> Correr para esquerda e direita.</p>
-      <p><strong>W / Espaço / Backspace:</strong> Pular (pressione novamente no ar para Pulo Duplo).</p>
-      <p><strong>S / Seta Baixo:</strong> Agachar para desviar de galhos e obstáculos aéreos.</p>
-      <p><strong>J / Z / Enter:</strong> Chute energético para quebrar perigos terrestres/aéreos.</p>
-      <p><strong>Dica:</strong> Cuidado com os animais voadores e desvie usando o agachamento ou pulando!</p>
+      <p><strong>PC:</strong> [A/D] Mover | [W/Espaço] Pular & Pulo Duplo | [S] Agachar | [J/Z] Chute.</p>
+      <p><strong>Celular:</strong> Utilize os botões direcionais (◀ ▶), o botão de agachar (▼), pulo e chute diretamente na tela horizontal.</p>
+      <p><strong>Dica:</strong> Colete sementes e desvie ou destrua obstáculos do Cerrado!</p>
     `);
   };
 
