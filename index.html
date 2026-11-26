@@ -176,10 +176,34 @@ body:has(#touch-controls.active) #info-controls {display:none;}
 #menu-end .menu-grid button {position:absolute;pointer-events:auto;top:79%;height:11%;width:24%;left:24.5%;padding:0;font-size:1.8cqw;line-height:1.1;background:transparent;border:0;box-shadow:none;color:white;text-shadow:2px 2px #210c36;transform:none;border-radius:12px;}
 #menu-end #btn-end-menu {left:51.5%;}
 #menu-end .menu-grid button:hover,#menu-end .menu-grid button:focus-visible {background:#ffcf40;color:#291536;text-shadow:none;outline:2px solid #fff0a0;}
+#menu-end.victory #end-title {top:54%;font-size:2.7cqw;line-height:1.15;text-align:center;}
+#menu-end.victory #end-content {top:61%;height:10.5%;color:#ffe79a;font-size:2cqw;font-weight:bold;line-height:1.2;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:0.35cqw;text-shadow:2px 2px #241039;}
+#menu-end.victory #end-content p {margin:0;padding:0;}
 #menu-end.defeat #end-title {top:72%;font-size:3cqw;}
 #menu-end.defeat #end-content {top:38%;left:9%;width:21%;height:20%;font-size:1.65cqw;background:rgba(8,12,40,.7);border-radius:8px;padding:1%;}
 #menu-end.defeat .menu-grid button {top:81%;height:6.5%;background:#62268e;border:2px solid #d578ed;}
 #menu-end.defeat .menu-grid button:hover {background:#ffcf40;}
+
+
+/* Controle portátil: sobreposto apenas nas extremidades em paisagem. */
+#touch-controls.active {position:fixed;inset:0;width:100%;height:100dvh;padding:0;display:block;pointer-events:none;z-index:9;--key:clamp(38px,8dvh,68px);--edge:clamp(8px,2vw,28px);}
+#touch-controls .t-btn {position:absolute;inset:auto;width:var(--key);height:var(--key);padding:0;background:rgba(0,0,0,.32);border:2px solid rgba(255,255,255,.85);color:white;box-shadow:0 1px 5px #0008;font-size:calc(var(--key)*.48);border-radius:9px;pointer-events:auto;touch-action:none;}
+#touch-controls .t-btn:active {background:rgba(255,255,255,.42);}
+#touch-controls #btn-left {left:var(--edge);bottom:calc(var(--edge) + var(--key));}
+#touch-controls #btn-right {left:calc(var(--edge) + 2 * var(--key) + 8px);bottom:calc(var(--edge) + var(--key));}
+#touch-controls #btn-up {left:calc(var(--edge) + var(--key) + 4px);bottom:calc(var(--edge) + 2 * var(--key) + 4px);}
+#touch-controls #btn-down {left:calc(var(--edge) + var(--key) + 4px);bottom:var(--edge);}
+#touch-controls #btn-jump,#touch-controls #btn-attack {border-radius:50%;width:calc(var(--key)*1.25);height:calc(var(--key)*1.25);}
+#touch-controls #btn-jump {right:var(--edge);bottom:calc(var(--edge) + var(--key));}
+#touch-controls #btn-attack {right:calc(var(--edge) + var(--key)*1.4);bottom:var(--edge);}
+#touch-controls #btn-pause-mob {right:var(--edge);top:var(--edge);width:48px;height:26px;border-radius:20px;font-size:14px;}
+body:has(#touch-controls.active) {height:100dvh;min-height:0;padding:0;overflow:hidden;background:#080c0a;}
+body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 / 9));border-width:2px;box-shadow:none;}
+@media (orientation:portrait) {
+ body:has(#touch-controls.active) #game-shell {width:100vw;}
+ #touch-controls.active {position:relative;height:calc(var(--key)*3 + 28px);flex-shrink:0;--key:clamp(40px,11vw,60px);}
+ #touch-controls #btn-pause-mob {top:4px;right:calc(50% - 24px);}
+}
 
 </style>
 </head>
@@ -223,12 +247,13 @@ body:has(#touch-controls.active) #info-controls {display:none;}
     </div>
   </div>
     <div id="touch-controls">
-      <div id="btn-left" class="t-btn">◀</div>
-      <div id="btn-right" class="t-btn">▶</div>
-      <div id="btn-down" class="t-btn">▼</div>
-      <div id="btn-jump" class="t-btn">PULA</div>
-      <div id="btn-attack" class="t-btn">CHUTE</div>
-      <div id="btn-pause-mob" class="t-btn">⏸</div>
+      <div id="btn-up" class="t-btn" aria-label="Pular">△</div>
+      <div id="btn-left" class="t-btn" aria-label="Esquerda">◁</div>
+      <div id="btn-right" class="t-btn" aria-label="Direita">▷</div>
+      <div id="btn-down" class="t-btn" aria-label="Agachar">▽</div>
+      <div id="btn-jump" class="t-btn" aria-label="Pular">A</div>
+      <div id="btn-attack" class="t-btn" aria-label="Atacar">B</div>
+      <div id="btn-pause-mob" class="t-btn" aria-label="Pausar">Ⅱ</div>
     </div>
 
   <div id="info-controls" class="controls-bar">
@@ -564,11 +589,13 @@ body:has(#touch-controls.active) #info-controls {display:none;}
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('touchstart', (e) => { e.preventDefault(); touchState[keyName] = true; if (keyName === 'jump') tryJump(); if (keyName === 'attack') tryAttack(); }, {passive: false});
+    el.addEventListener('touchcancel', () => { touchState[keyName] = false; });
     el.addEventListener('touchend', (e) => { e.preventDefault(); touchState[keyName] = false; }, {passive: false});
     el.addEventListener('mousedown', (e) => { e.preventDefault(); touchState[keyName] = true; if (keyName === 'jump') tryJump(); if (keyName === 'attack') tryAttack(); });
     el.addEventListener('mouseup', (e) => { e.preventDefault(); touchState[keyName] = false; });
   }
 
+  bindTouchButton('btn-up', 'jump');
   bindTouchButton('btn-left', 'left');
   bindTouchButton('btn-right', 'right');
   bindTouchButton('btn-down', 'down');
@@ -1163,13 +1190,10 @@ body:has(#touch-controls.active) #info-controls {display:none;}
 
     document.getElementById('menu-end').classList.remove('defeat');
     document.getElementById('menu-end').classList.add('victory');
-    document.getElementById('end-title').textContent = isLast ? 'CERRADO PROTEGIDO!' : `${LEVELS[currentLevelIdx].name} CONCLUÍDA!`;
+    document.getElementById('end-title').textContent = isLast ? 'CERRADO PROTEGIDO!' : 'FASE CONCLUÍDA!';
     document.getElementById('end-content').innerHTML = `
-      <p title="Engenheira Ambiental">${LEVELS[currentLevelIdx].curiosity}</p>
-      <p>Sementes Entregues na Fase: <strong>${levelData.collectedInLevel}</strong></p>
-      <p>Bônus Sem Colisões: <strong>+${noHitBonus} pts</strong></p>
-      <p>Pontuação Total: <strong>${score}</strong></p>
-      <p>Tempo da Run: <strong>${formatTime(elapsedMs)}</strong></p>
+      <p>TEMPO: ${formatTime(elapsedMs)}</p>
+      <p>SEMENTES: ${levelData.collectedInLevel}</p>
     `;
     const btnNext = document.getElementById('btn-next');
     btnNext.textContent = isLast ? 'JOGAR NOVAMENTE' : 'PRÓXIMA FASE';
