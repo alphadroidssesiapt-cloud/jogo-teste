@@ -119,7 +119,6 @@
       text-align: center;
     }
 
-    /* Botões Virtuais para Celular */
     #touch-controls {
       position: absolute;
       inset: 0;
@@ -156,7 +155,6 @@
   <div id="game-shell">
     <canvas id="gameCanvas" width="480" height="270"></canvas>
 
-    <!-- Controles Virtuais de Celular -->
     <div id="touch-controls">
       <div id="btn-left" class="t-btn">◀</div>
       <div id="btn-right" class="t-btn">▶</div>
@@ -223,7 +221,7 @@
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
-  let playMode = 'pc'; // 'pc' ou 'celular'
+  let playMode = 'pc';
 
   const rawSources = {
     lobo: 'assets/Sprite Sheet de Lobo em Ação.png',
@@ -365,7 +363,7 @@
       ctx.drawImage(sheet, sx, sy, sw, sh, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     }
     if (tintOrange) {
-      ctx.fillStyle = 'rgba(230, 110, 20, 0.38)';
+      ctx.fillStyle = 'rgba(235, 100, 15, 0.45)';
       ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     }
     ctx.restore();
@@ -518,8 +516,6 @@
   };
 
   const keys = {};
-
-  // Handlers para os botões virtuais de toque do Celular
   const touchState = { left: false, right: false, down: false };
 
   function bindTouchButton(id, keyName) {
@@ -999,7 +995,8 @@
       else if (obs.type === 'bird') spriteKey = 'ave';
 
       const isBird = obs.type === 'bird';
-      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, isBird);
+      const isTerrestrialObs = (obs.type === 'rock' || obs.type === 'cactus' || obs.type === 'branch' || obs.type === 'roller');
+      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, isTerrestrialObs || isBird);
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
@@ -1198,7 +1195,6 @@
     document.getElementById('menu-sub').classList.remove('hidden');
   }
 
-  // Seleção de Modo (PC ou Celular)
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
