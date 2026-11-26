@@ -912,7 +912,7 @@
 
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
-      let fIdx = Math.floor(player.animTimer) % frameList.length;
+      let fIdx = 0; // Fixado estaticamente no primeiro quadro quando parado de verdade
 
       if (player.attackTimer > 0) {
         frameList = LOBO_FRAMES.attack;
