@@ -296,7 +296,7 @@
     ctx.restore();
   }
 
-  // Função para desenhar a silhueta com contorno exato em volta do sprite
+  // Desenha contorno exato na silhueta orgânica do sprite (sem caixas retangulares)
   function drawOutlinedSprite(sheet, normRect, dx, dy, dw, dh, flipX = false, outlineColor = '#ffcf40') {
     if (!sheet) return;
     const [nx, ny, nw, nh] = normRect;
@@ -306,8 +306,7 @@
     const sh = Math.floor(nh * sheet.height);
 
     ctx.save();
-    // Desenha o contorno deslocando nas 4 direções cardinais
-    const offsets = [[-1,0], [1,0], [0,-1], [0,1]];
+    const offsets = [[-1,0], [1,0], [0,-1], [0,1], [-1,-1], [1,1], [-1,1], [1,-1]];
     ctx.fillStyle = outlineColor;
     for (const [ox, oy] of offsets) {
       if (flipX) {
@@ -322,7 +321,6 @@
     }
     ctx.restore();
 
-    // Desenha o sprite original por cima mantendo a aparência intacta
     drawSheetRegion(sheet, normRect, dx, dy, dw, dh, flipX);
   }
 
@@ -431,7 +429,6 @@
 
   const GROUND_Y = 224;
 
-  // Personagem com tamanho otimizado e visível
   const player = {
     x: 48, y: GROUND_Y - 54, w: 32, h: 54,
     vx: 0, vy: 0, facing: 1,
@@ -820,8 +817,8 @@
     drawSheetRegion(sheets.cerrado, bgNorm, -parallaxOffset, 0, bgW, GROUND_Y);
     drawSheetRegion(sheets.cerrado, bgNorm, bgW - parallaxOffset, 0, bgW, GROUND_Y);
 
-    // Fundo levemente borrado/escurecido para destacar a jogabilidade
-    ctx.fillStyle = 'rgba(10, 22, 16, 0.35)';
+    // Fundo levemente escurecido/borrado para dar foco à jogabilidade
+    ctx.fillStyle = 'rgba(10, 22, 16, 0.4)';
     ctx.fillRect(0, 0, canvas.width, GROUND_Y);
 
     if (lvl.cfg.id === 3) {
@@ -833,7 +830,7 @@
     ctx.translate(-Math.floor(cameraX), 0);
 
     ctx.save();
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.65;
     for (const d of lvl.decors) {
       if (d.x + d.w < cameraX - 20 || d.x > cameraX + canvas.width + 20) continue;
       drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[d.sprite], d.x, d.y - d.h, d.w, d.h);
@@ -876,17 +873,19 @@
       drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 16, 18);
     }
 
-    // Obstáculos e inimigos com contorno nítido na silhueta
+    // Obstáculos e inimigos com contorno nítido na silhueta orgânica
     for (const obs of lvl.obstacles) {
       if (obs.defeated) continue;
       let spriteKey = obs.type;
-      let outlineColor = '#ff9f1c';
+      let outlineColor = '#ffcf40';
       if (obs.type === 'branch') {
         spriteKey = 'bush';
-        outlineColor = '#ffcf40';
+        outlineColor = '#ffe66d';
       } else if (obs.type === 'roller') {
         spriteKey = 'rock';
-        outlineColor = '#ff3366';
+        outlineColor = '#ff4d6d';
+      } else if (obs.type === 'cactus') {
+        outlineColor = '#48cae4';
       }
       drawOutlinedSprite(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, outlineColor);
     }
@@ -931,7 +930,7 @@
         drawW,
         drawH,
         player.facing === -1,
-        '#00ffff'
+        '#00f5d4'
       );
     }
 
