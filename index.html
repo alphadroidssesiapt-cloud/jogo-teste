@@ -239,6 +239,8 @@
   };
 
   const sheets = {};
+  const wolfBoxes = {"wolf_idle": [[13, 186, 220, 348], [272, 181, 216, 353], [530, 174, 214, 360], [786, 164, 214, 370], [1042, 158, 212, 376], [1301, 172, 211, 362], [1554, 182, 215, 352], [1808, 189, 216, 345]], "wolf_walk": [[14, 172, 215, 340], [270, 172, 216, 342], [528, 177, 217, 336], [784, 180, 226, 328], [1042, 177, 214, 332], [1299, 177, 214, 334], [1554, 177, 216, 334], [1808, 172, 215, 340]], "wolf_run": [[10, 212, 241, 279], [264, 212, 247, 279], [513, 210, 255, 263], [768, 207, 256, 246], [1024, 210, 256, 288], [1280, 213, 255, 285], [1571, 213, 215, 285], [1831, 211, 212, 287]], "wolf_jump": [[15, 330, 230, 215], [269, 264, 220, 281], [523, 206, 216, 286], [780, 166, 207, 297], [1033, 151, 225, 285], [1300, 188, 212, 290], [1544, 250, 207, 290], [1792, 325, 234, 220]], "wolf_crouch": [[15, 215, 228, 283], [267, 234, 232, 264], [512, 258, 256, 236], [768, 287, 244, 212], [1024, 319, 253, 180], [1290, 288, 237, 210], [1546, 266, 232, 231], [1803, 239, 222, 259]], "wolf_attack": [[21, 226, 203, 273], [263, 234, 249, 265], [512, 234, 256, 265], [768, 227, 256, 272], [1024, 225, 256, 274], [1280, 225, 256, 274], [1536, 243, 256, 256], [1792, 246, 220, 253]]};
+  const obstacleCache = new Map();
 
   function createFallbackCanvas(w, h, drawFn) {
     const c = document.createElement('canvas');
@@ -259,7 +261,9 @@
 
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], gr = d[i + 1], b = d[i + 2];
-      if (type === 'lobo') {
+      if (type === 'wolf_walk') {
+        if (Math.min(r,gr,b)>180 && Math.max(r,gr,b)-Math.min(r,gr,b)<22) d[i+3]=0;
+      } else if (type === 'lobo') {
         if (type === 'seed' && r > 242 && gr > 242 && b > 242) d[i + 3] = 0;
       } else if (type === 'seed') {
         if (r > 242 && gr > 242 && b > 242) d[i + 3] = 0;
@@ -291,7 +295,7 @@
           sheets.lobo = createFallbackCanvas(64, 64, (g) => {
             g.fillStyle = '#40e0d0'; g.fillRect(16, 16, 32, 32);
           });
-        } else if (key === 'bird' || key === 'roller') {
+        } else if (key.startsWith('wolf_') || key === 'bird' || key === 'roller') {
           sheets[key] = null;
         } else if (key === 'seed') {
           sheets.seed = createFallbackCanvas(32, 32, (g) => {
@@ -343,6 +347,28 @@
       ctx.fillStyle = 'rgba(235, 100, 15, 0.45)';
       ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     }
+    ctx.restore();
+  }
+
+  function drawObstacle(sheet, rect, x,y,w,h,flip=false) {
+    if (!sheet || !rect) return;
+    const key = (sheet===sheets.roller?'roller':'cerrado')+rect.join(',');
+    let sprite=obstacleCache.get(key);
+    if (!sprite) {
+      const [a,b,c,d]=rect;
+      sprite=document.createElement('canvas');
+      sprite.width=Math.max(1,Math.round(c*sheet.width));
+      sprite.height=Math.max(1,Math.round(d*sheet.height));
+      const g=sprite.getContext('2d');
+      g.drawImage(sheet,a*sheet.width,b*sheet.height,c*sheet.width,d*sheet.height,0,0,sprite.width,sprite.height);
+      g.globalCompositeOperation='source-atop';
+      g.fillStyle='rgba(255,155,45,0.34)';
+      g.fillRect(0,0,sprite.width,sprite.height);
+      obstacleCache.set(key,sprite);
+    }
+    ctx.save();
+    ctx.shadowColor='#ffe1a0'; ctx.shadowBlur=2;
+    drawSheetRegion(sprite,[0,0,1,1],x,y,w,h,flip);
     ctx.restore();
   }
 
@@ -995,7 +1021,7 @@
       if (obs.defeated) continue;
       let spriteKey = obs.type;
       if (obs.type === 'branch') spriteKey = 'bush';
-      else if (obs.type === 'roller') { if(sheets.roller) { drawSheetRegion(sheets.roller, [Math.floor(obs.anim*12)%8/8,.29,.125,.38],obs.x-3,obs.y-3,32,29,obs.vx<0); continue; } spriteKey = 'bush'; }
+      else if (obs.type === 'roller') { if(sheets.roller) { drawObstacle(sheets.roller, [Math.floor(obs.anim*12)%8/8,.29,.125,.38],obs.x-3,obs.y-3,32,29,obs.vx<0); continue; } spriteKey = 'bush'; }
       else if (obs.type === 'bird') {
         if (sheets.bird) {
           const frame = Math.floor(obs.anim * 12) % 8;
@@ -1008,7 +1034,7 @@
 
       const isBird = obs.type === 'bird';
       const isTerrestrialObs = (obs.type === 'rock' || obs.type === 'cactus' || obs.type === 'branch' || obs.type === 'roller');
-      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h, false, false);
+      drawObstacle(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h);
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
@@ -1042,7 +1068,12 @@
       if (pose === 'attack') frame = Math.min(7, Math.floor(player.animTimer * fps));
       if (pose === 'jump') frame = player.vy < 0 ? Math.min(4, 1+Math.floor(player.animTimer*12)) : Math.min(7, 5+Math.floor(Math.max(0,player.vy)/150));
       const sheet = sheets['wolf_'+pose];
-      if (sheet) drawSheetRegion(sheet,[frame/8,0,1/8,1],player.x+player.w/2-40,player.y+player.h-64,80,64,player.facing===-1);
+      if (sheet) {
+        const [sx,sy,sw,sh] = wolfBoxes['wolf_'+pose][frame];
+        const scale = 46 / 345;
+        const dw = sw * scale, dh = sh * scale;
+        drawSheetRegion(sheet,[sx/2048,sy/682,sw/2048,sh/682],player.x+player.w/2-dw/2,player.y+player.h-dh,dw,dh,player.facing===-1);
+      }
       else drawSheetRegion(sheets.lobo,LOBO_FRAMES.idle[0],player.x-4,player.y+player.h-44,30,44,player.facing===-1);
     }
 
