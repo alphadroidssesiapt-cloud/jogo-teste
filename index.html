@@ -225,10 +225,10 @@
 
   const rawSources = {
     terrain: 'assets/Tileset Pixel Art de Terreno e Plataformas.png',
-    landscape4: 'assets/Fases do Cerrado em Pixel Art-4.png',
-    landscape3: 'assets/Quatro Fases do Cerrado em Pixel Art-3.png',
+    landscape4: 'assets/Sprite-Sheet Pixel Art do Cerrado 微信的天天中彩票-2.png',
+    landscape3: 'assets/Sprite-Sheet Pixel Art do Cerrado 微信的天天中彩票-2.png',
     landscape2: 'assets/Sprite-Sheet Pixel Art do Cerrado 微信的天天中彩票-2.png',
-    landscape1: 'assets/Quatro Biomas do Cerrado em Pixel Art-1.png',
+    landscape1: 'assets/Sprite-Sheet Pixel Art do Cerrado 微信的天天中彩票-2.png',
     wolf_idle: 'assets/Animação Pixel Art de Lobo Husky-1.png',
     wolf_walk: 'assets/Ciclo de Caminhada do Lobo Pixelado-2.png',
     wolf_run: 'assets/Sprite de Corrida do Lobo Pixelado-3.png',
@@ -294,7 +294,7 @@
       img.onload = () => {
         if (key.startsWith('landscape')) {
           const n = Number(key.slice(9));
-          const rows = [[0,138],[173,318],[343,481],[514,657]];
+          const rows = [[0,148],[172,318],[342,489],[512,657]];
           const [top,bottom] = rows[n-1];
           sheets[key] = createFallbackCanvas(1698,bottom-top,(g,w,h)=>{
             g.drawImage(img,350*img.width/2048,top*img.height/682,w*img.width/2048,h*img.height/682,0,0,w,h);
@@ -303,7 +303,7 @@
         resolve();
       };
       img.onerror = () => {
-        if (key === 'landscape2' && !img.dataset.retried) {
+        if (key.startsWith('landscape') && !img.dataset.retried) {
           img.dataset.retried = '1';
           img.src = 'assets/Sprite-Sheet Pixel Art do Cerrado 微信的天天中彩票-2.png';
           return;
