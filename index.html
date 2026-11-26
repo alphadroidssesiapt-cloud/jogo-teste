@@ -35,7 +35,7 @@
     .overlay {
       position: absolute;
       inset: 0;
-      background: rgba(10, 20, 16, 0.88);
+      background: rgba(10, 20, 16, 0.86);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -74,19 +74,16 @@
       cursor: pointer;
       text-transform: uppercase;
       box-shadow: 0 3px 0 #0f4734;
-      transition: all 0.1s;
     }
     button:hover { background: #2ca87e; transform: translateY(-1px); }
     button:active { transform: translateY(2px); box-shadow: none; }
     button.secondary { background: #284639; border-color: #6ea88f; }
-    button:disabled { background: #1b2e25; border-color: #3b5c4c; color: #5c8573; cursor: not-allowed; box-shadow: none; transform: none; }
     .diff-row { display: flex; gap: 6px; margin-bottom: 8px; }
     .diff-btn.active { background: #e09f1f; border-color: #fff3b0; color: #1b1400; }
     .panel-box {
-      background: #12221b;
-      border: 3px solid #3a7a5e;
-      box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-      padding: 14px;
+      background: #14261e;
+      border: 2px solid #59a886;
+      padding: 12px;
       max-width: 680px;
       width: 92%;
       max-height: 68%;
@@ -96,17 +93,6 @@
       text-align: left;
       margin-bottom: 12px;
     }
-    .level-card {
-      background: #183327;
-      border: 2px solid #52b788;
-      padding: 8px 12px;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-    }
-    .level-card.locked { opacity: 0.6; cursor: not-allowed; border-color: #2b4a3c; }
     .controls-bar {
       margin-top: 8px;
       font-size: 12px;
@@ -171,8 +157,8 @@
   ctx.imageSmoothingEnabled = false;
 
   const rawSources = {
-    lobo: 'assets/Sprite Sheet de Lobo em Ação.png',
-    cerrado: 'assets/Kit Pixel Art do Cerrado Brasileiro.png',
+    lobo: 'assets/lobo.png',
+    cerrado: 'assets/cerrado.png',
     seed: 'assets/seed.png',
     npc: 'assets/npc.jpg'
   };
@@ -198,10 +184,7 @@
 
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], gr = d[i + 1], b = d[i + 2];
-      if (type === 'lobo') {
-        // Remove apenas o fundo branco puro da sprite sheet original do lobo sem afetar o pelo cinza/branco
-        if (r > 248 && gr > 248 && b > 248) d[i + 3] = 0;
-      } else if (type === 'seed') {
+      if (type === 'lobo' || type === 'seed') {
         if (r > 242 && gr > 242 && b > 242) d[i + 3] = 0;
       } else if (type === 'npc') {
         if (r > 155 && b > 120 && gr < 115 && (r - gr) > 55) d[i + 3] = 0;
@@ -227,9 +210,11 @@
         resolve();
       };
       img.onerror = () => {
+        // Fallbacks visuais automáticos se o arquivo não for encontrado
         if (key === 'lobo') {
           sheets.lobo = createFallbackCanvas(64, 64, (g) => {
             g.fillStyle = '#40e0d0'; g.fillRect(16, 16, 32, 32);
+            g.fillStyle = '#6c757d'; g.fillRect(20, 20, 24, 24);
           });
         } else if (key === 'seed') {
           sheets.seed = createFallbackCanvas(32, 32, (g) => {
@@ -238,6 +223,7 @@
         } else if (key === 'npc') {
           sheets.npc = createFallbackCanvas(64, 64, (g) => {
             g.fillStyle = '#1d3557'; g.fillRect(16, 16, 32, 48);
+            g.fillStyle = '#f1faee'; g.fillRect(24, 8, 16, 16);
           });
         } else {
           sheets.cerrado = createFallbackCanvas(100, 100, (g) => {
@@ -250,17 +236,16 @@
     })));
   }
 
-  // Coordenadas exatas e limpas para todos os frames do lobo-guará
   const LOBO_FRAMES = {
-    idle:   [[0.015,0.035,0.08,0.20],[0.115,0.035,0.08,0.20],[0.215,0.035,0.08,0.20],[0.315,0.035,0.08,0.20]],
-    walk:   [[0.51,0.035,0.08,0.20],[0.61,0.035,0.08,0.20],[0.71,0.035,0.08,0.20],[0.81,0.035,0.08,0.20]],
-    run:    [[0.015,0.29,0.09,0.19],[0.135,0.29,0.09,0.19],[0.255,0.29,0.09,0.19],[0.375,0.29,0.09,0.19]],
-    jump:   [[0.495,0.29,0.09,0.19],[0.605,0.28,0.09,0.19],[0.71,0.27,0.09,0.20]],
-    fall:   [[0.805,0.27,0.09,0.20],[0.885,0.29,0.09,0.18]],
-    crouch: [[0.22,0.57,0.09,0.15],[0.335,0.60,0.10,0.12]],
-    stand:  [[0.125,0.81,0.09,0.14],[0.23,0.79,0.09,0.16]],
-    attack: [[0.50,0.76,0.09,0.20],[0.60,0.75,0.12,0.21],[0.75,0.76,0.09,0.20]],
-    djump:  [[0.87,0.76,0.09,0.20]]
+    idle:   [[0.015,0.055,0.095,0.205],[0.105,0.055,0.095,0.205],[0.195,0.055,0.095,0.205],[0.285,0.055,0.095,0.205]],
+    walk:   [[0.51,0.055,0.10,0.205],[0.61,0.055,0.10,0.205],[0.71,0.055,0.10,0.205],[0.81,0.055,0.10,0.205]],
+    run:    [[0.015,0.31,0.115,0.19],[0.138,0.31,0.115,0.19],[0.252,0.31,0.115,0.19],[0.372,0.31,0.115,0.19]],
+    jump:   [[0.495,0.33,0.11,0.17],[0.605,0.32,0.105,0.18],[0.71,0.29,0.105,0.18]],
+    fall:   [[0.805,0.30,0.105,0.18],[0.885,0.34,0.105,0.17]],
+    crouch: [[0.22,0.58,0.115,0.15],[0.335,0.61,0.125,0.12]],
+    stand:  [[0.125,0.82,0.11,0.14],[0.23,0.80,0.105,0.16]],
+    attack: [[0.50,0.78,0.10,0.20],[0.60,0.77,0.145,0.21],[0.75,0.78,0.10,0.20]],
+    djump:  [[0.87,0.78,0.115,0.20]]
   };
 
   const CERRADO_SPRITES = {
@@ -312,19 +297,6 @@
       ctx.drawImage(sheet, sx, sy, sw, sh, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     }
     ctx.restore();
-  }
-
-  function drawPixelHeart(x, y) {
-    ctx.fillStyle = '#ff4d6d';
-    ctx.fillRect(x + 2, y, 3, 2);
-    ctx.fillRect(x + 7, y, 3, 2);
-    ctx.fillRect(x, y + 2, 12, 3);
-    ctx.fillRect(x + 1, y + 5, 10, 3);
-    ctx.fillRect(x + 2, y + 8, 8, 2);
-    ctx.fillRect(x + 4, y + 10, 4, 2);
-    ctx.fillRect(x + 5, y + 12, 2, 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(x + 2, y + 2, 2, 2);
   }
 
   const AudioFX = (() => {
@@ -433,7 +405,7 @@
   const GROUND_Y = 224;
 
   const player = {
-    x: 48, y: GROUND_Y - 64, w: 36, h: 64,
+    x: 48, y: GROUND_Y - 34, w: 20, h: 34,
     vx: 0, vy: 0, facing: 1,
     onGround: false, jumpsLeft: 2,
     crouching: false, attackTimer: 0, invulnTimer: 0,
@@ -467,16 +439,16 @@
 
   function tryJump() {
     if (player.onGround) {
-      player.vy = -345;
+      player.vy = -310;
       player.onGround = false;
       player.jumpsLeft = 1;
       AudioFX.jump();
-      spawnParticles(player.x + 18, player.y + player.h, '#d8f3dc', 6);
+      spawnParticles(player.x + 10, player.y + player.h, '#d8f3dc', 6);
     } else if (player.jumpsLeft > 0) {
-      player.vy = -300;
+      player.vy = -275;
       player.jumpsLeft = 0;
       AudioFX.djump();
-      spawnParticles(player.x + 18, player.y + player.h, '#74c69d', 8);
+      spawnParticles(player.x + 10, player.y + player.h, '#74c69d', 8);
     }
   }
 
@@ -514,51 +486,47 @@
     }
 
     for (let x = 260; x < cfg.length - 360; x += 270) {
-      const py = (x % 540 === 0) ? 140 : 162;
-      platforms.push({ x, y: py, w: 70, h: 16 });
-      blocks.push({ x: x + 26, y: py - 46, w: 18, h: 18, hit: false, bounce: 0 });
-      seeds.push({ x: x + 10, y: py - 20, collected: false, bob: x * 0.02 });
-      seeds.push({ x: x + 44, y: py - 20, collected: false, bob: x * 0.02 + 1 });
+      const py = (x % 540 === 0) ? 148 : 168;
+      platforms.push({ x, y: py, w: 64, h: 14 });
+      blocks.push({ x: x + 24, y: py - 42, w: 16, h: 16, hit: false, bounce: 0 });
+      seeds.push({ x: x + 10, y: py - 18, collected: false, bob: x * 0.02 });
+      seeds.push({ x: x + 42, y: py - 18, collected: false, bob: x * 0.02 + 1 });
     }
 
     for (let x = 180; x < cfg.length - 300; x += 190) {
       const inPit = pits.some(p => x > p.x - 20 && x < p.x + p.w + 20);
       if (!inPit) {
-        seeds.push({ x, y: GROUND_Y - 24, collected: false, bob: x * 0.05 });
+        seeds.push({ x, y: GROUND_Y - 22, collected: false, bob: x * 0.05 });
       }
     }
 
     const obsTypes = ['rock', 'bush', 'cactus', 'branch_high', 'rolling_cone'];
-    for (let x = 360; x < cfg.length - 340; x += Math.round(255 / mult)) {
-      const inPit = pits.some(p => x > p.x - 50 && x < p.x + p.w + 50);
+    for (let x = 340; x < cfg.length - 340; x += Math.round(235 / mult)) {
+      const inPit = pits.some(p => x > p.x - 45 && x < p.x + p.w + 45);
       if (inPit) continue;
       const t = obsTypes[(Math.floor(x / 100) + idx) % obsTypes.length];
       if (t === 'branch_high') {
-        const h = 22;
-        obstacles.push({ type: 'branch', x, y: GROUND_Y - h, w: 44, h: h, defeat: false });
-        seeds.push({ x: x + 13, y: GROUND_Y - 18, collected: false, bob: 0 });
+        obstacles.push({ type: 'branch', x, y: GROUND_Y - 40, w: 34, h: 16, defeat: false });
+        seeds.push({ x: x + 10, y: GROUND_Y - 16, collected: false, bob: 0 });
       } else if (t === 'rolling_cone') {
-        const h = 26;
         obstacles.push({
-          type: 'roller', x, y: GROUND_Y - h, w: 26, h: h,
-          vx: -52 * mult, baseX: x, defeated: false
+          type: 'roller', x, y: GROUND_Y - 16, w: 16, h: 16,
+          vx: -48 * mult, baseX: x, defeated: false
         });
-      } else if (t === 'cactus') {
-        const h = 38;
-        obstacles.push({ type: t, x, y: GROUND_Y - h, w: 20, h: h, defeated: false });
       } else {
-        const h = t === 'rock' ? 28 : 24;
-        obstacles.push({ type: t, x, y: GROUND_Y - h, w: 30, h: h, defeated: false });
+        obstacles.push({
+          type: t, x, y: GROUND_Y - (t === 'cactus' ? 26 : 18),
+          w: t === 'cactus' ? 14 : 22, h: t === 'cactus' ? 26 : 18, defeated: false
+        });
       }
     }
 
     for (let x = 90; x < cfg.length - 200; x += 175) {
       const fl = cfg.flora[Math.floor(x / 175) % cfg.flora.length];
-      const fh = fl === 'bush' ? 22 : 54;
-      decors.push({ sprite: fl, x, y: GROUND_Y - fh, w: fl === 'bush' ? 28 : 46, h: fh });
+      decors.push({ sprite: fl, x, y: GROUND_Y, w: fl === 'bush' ? 28 : 46, h: fl === 'bush' ? 22 : 54 });
       if ((x / 175) % 2 === 1) {
         const fa = cfg.fauna[Math.floor(x / 350) % cfg.fauna.length];
-        decors.push({ sprite: fa, x: x + 58, y: GROUND_Y - 22, w: 28, h: 22 });
+        decors.push({ sprite: fa, x: x + 58, y: GROUND_Y, w: 28, h: 22 });
       }
     }
 
@@ -588,7 +556,7 @@
     cameraX = 0;
     particles = [];
     player.x = 48;
-    player.y = GROUND_Y - 64;
+    player.y = GROUND_Y - 34;
     player.vx = 0;
     player.vy = 0;
     player.facing = 1;
@@ -621,7 +589,7 @@
     }
 
     const mult = DIFF_MULT[difficulty];
-    const moveSpeed = 150 * mult;
+    const moveSpeed = 145 * mult;
 
     const left = keys['a'] || keys['arrowleft'];
     const right = keys['d'] || keys['arrowright'];
@@ -630,13 +598,13 @@
     if (down && player.onGround) {
       if (!player.crouching) {
         player.crouching = true;
-        player.y += 24;
-        player.h = 40;
+        player.y += 12;
+        player.h = 22;
       }
     } else if (player.crouching) {
       player.crouching = false;
-      player.y -= 24;
-      player.h = 64;
+      player.y -= 12;
+      player.h = 34;
       player.standTimer = 0.16;
     }
 
@@ -696,8 +664,8 @@
         AudioFX.block();
         if (!blk.hit) {
           blk.hit = true;
-          levelData.seeds.push({ x: blk.x + 2, y: blk.y - 20, collected: false, bob: 0 });
-          spawnParticles(blk.x + 9, blk.y, '#ffcf40', 8);
+          levelData.seeds.push({ x: blk.x + 2, y: blk.y - 18, collected: false, bob: 0 });
+          spawnParticles(blk.x + 8, blk.y, '#ffcf40', 8);
         }
       }
     }
@@ -709,13 +677,13 @@
     for (const s of levelData.seeds) {
       if (s.collected) continue;
       s.bob += dt * 5;
-      if (rectsOverlap(player, { x: s.x, y: s.y, w: 16, h: 18 })) {
+      if (rectsOverlap(player, { x: s.x, y: s.y, w: 14, h: 16 })) {
         s.collected = true;
         levelData.collectedInLevel++;
         totalRunSeeds++;
         score += 100;
         AudioFX.seed();
-        spawnParticles(s.x + 8, s.y + 9, '#a7f3d0', 10);
+        spawnParticles(s.x + 7, s.y + 8, '#a7f3d0', 10);
 
         const save = Storage.get();
         save.totalSeeds = (save.totalSeeds || 0) + 1;
@@ -726,8 +694,8 @@
     }
 
     const kickBox = player.attackTimer > 0 ? {
-      x: player.facing === 1 ? player.x + player.w : player.x - 26,
-      y: player.y + 6, w: 26, h: 36
+      x: player.facing === 1 ? player.x + player.w : player.x - 18,
+      y: player.y + 4, w: 18, h: 24
     } : null;
 
     for (const obs of levelData.obstacles) {
@@ -741,17 +709,17 @@
         obs.defeated = true;
         score += 150;
         AudioFX.stomp();
-        spawnParticles(obs.x + 13, obs.y + 13, '#ffcf40', 10);
+        spawnParticles(obs.x + 8, obs.y + 8, '#ffcf40', 10);
         continue;
       }
 
       if (rectsOverlap(player, obs)) {
-        if (obs.type === 'roller' && player.vy > 0 && prevBottom <= obs.y + 10) {
+        if (obs.type === 'roller' && player.vy > 0 && prevBottom <= obs.y + 8) {
           obs.defeated = true;
-          player.vy = -260;
+          player.vy = -240;
           score += 150;
           AudioFX.stomp();
-          spawnParticles(obs.x + 13, obs.y + 13, '#ffcf40', 10);
+          spawnParticles(obs.x + 8, obs.y + 8, '#ffcf40', 10);
         } else {
           damagePlayer(false);
         }
@@ -764,12 +732,12 @@
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
       player.crouching = false;
-      player.h = 64;
-      player.y = GROUND_Y - 64;
+      player.h = 34;
+      player.y = GROUND_Y - 34;
       state = 'DELIVER';
       levelData.deliverTimer = 0;
       AudioFX.win();
-      spawnParticles(levelData.npcX + 12, GROUND_Y - 40, '#ffcf40', 22);
+      spawnParticles(levelData.npcX + 10, GROUND_Y - 30, '#ffcf40', 22);
     }
 
     updateParticles(dt);
@@ -780,7 +748,7 @@
     lives--;
     levelHits++;
     AudioFX.hit();
-    spawnParticles(player.x + 18, player.y + 32, '#ff6b6b', 14);
+    spawnParticles(player.x + 10, player.y + 16, '#ff6b6b', 14);
 
     if (lives <= 0) {
       endGame(false);
@@ -789,7 +757,7 @@
 
     if (fellInPit) {
       player.x = Math.max(40, player.x - 90);
-      player.y = GROUND_Y - 90;
+      player.y = GROUND_Y - 80;
       player.vy = 0;
     }
     player.invulnTimer = 1.5;
@@ -824,9 +792,6 @@
     drawSheetRegion(sheets.cerrado, bgNorm, -parallaxOffset, 0, bgW, GROUND_Y);
     drawSheetRegion(sheets.cerrado, bgNorm, bgW - parallaxOffset, 0, bgW, GROUND_Y);
 
-    ctx.fillStyle = 'rgba(10, 22, 16, 0.4)';
-    ctx.fillRect(0, 0, canvas.width, GROUND_Y);
-
     if (lvl.cfg.id === 3) {
       const wfX = 320 - ((cameraX * 0.35) % 480);
       drawSheetRegion(sheets.cerrado, CERRADO_SPRITES.waterfall, wfX, GROUND_Y - 72, 48, 72);
@@ -835,13 +800,10 @@
     ctx.save();
     ctx.translate(-Math.floor(cameraX), 0);
 
-    ctx.save();
-    ctx.globalAlpha = 0.65;
     for (const d of lvl.decors) {
       if (d.x + d.w < cameraX - 20 || d.x > cameraX + canvas.width + 20) continue;
-      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[d.sprite], d.x, d.y, d.w, d.h);
+      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[d.sprite], d.x, d.y - d.h, d.w, d.h);
     }
-    ctx.restore();
 
     const tileW = 32;
     const firstTile = Math.floor(cameraX / tileW) * tileW;
@@ -867,50 +829,31 @@
       ctx.strokeRect(blk.x + 0.5, by + 0.5, blk.w - 1, blk.h - 1);
       if (!blk.hit) {
         ctx.fillStyle = '#fff8d6';
-        ctx.fillRect(blk.x + 7, by + 4, 4, 2);
-        ctx.fillRect(blk.x + 9, by + 6, 2, 4);
-        ctx.fillRect(blk.x + 8, by + 12, 2, 2);
+        ctx.fillRect(blk.x + 6, by + 4, 4, 2);
+        ctx.fillRect(blk.x + 8, by + 6, 2, 3);
+        ctx.fillRect(blk.x + 7, by + 11, 2, 2);
       }
     }
 
     for (const s of lvl.seeds) {
       if (s.collected) continue;
       const offsetY = Math.sin(s.bob) * 2.5;
-      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 16, 18);
+      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], s.x, s.y + offsetY, 14, 16);
     }
 
     for (const obs of lvl.obstacles) {
       if (obs.defeated) continue;
-      let spriteKey = obs.type;
-      let outlineColor = '#ffcf40';
       if (obs.type === 'branch') {
-        spriteKey = 'bush';
-        outlineColor = '#ffe66d';
+        drawSheetRegion(sheets.cerrado, CERRADO_SPRITES.bush, obs.x, obs.y, obs.w, obs.h);
       } else if (obs.type === 'roller') {
-        spriteKey = 'rock';
-        outlineColor = '#ff4d6d';
-      } else if (obs.type === 'cactus') {
-        outlineColor = '#48cae4';
+        drawSheetRegion(sheets.cerrado, CERRADO_SPRITES.rock, obs.x, obs.y, obs.w, obs.h);
+      } else {
+        drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[obs.type], obs.x, obs.y, obs.w, obs.h);
       }
-      drawSheetRegion(sheets.cerrado, CERRADO_SPRITES[spriteKey], obs.x, obs.y, obs.w, obs.h);
     }
 
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
-    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
-
-    if (state === 'DELIVER') {
-      const bx = lvl.npcX - 70;
-      const by = GROUND_Y - 95;
-      ctx.fillStyle = 'rgba(10, 20, 16, 0.9)';
-      ctx.fillRect(bx, by, 165, 30);
-      ctx.strokeStyle = '#7ee0b8';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(bx, by, 165, 30);
-      ctx.fillStyle = '#fff3b0';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText('Obrigado por ajudar a', bx + 6, by + 12);
-      ctx.fillText('preservar a biodiversidade', bx + 6, by + 22);
-    }
+    drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 42, 24, 42, true);
 
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       let frameList = LOBO_FRAMES.idle;
@@ -937,13 +880,12 @@
         frameList = LOBO_FRAMES.walk; fIdx = Math.floor(player.animTimer) % frameList.length;
       }
 
-      const drawH = player.crouching ? 40 : 68;
-      const drawW = player.attackTimer > 0 ? 54 : 44;
-      
+      const drawH = player.crouching ? 24 : 36;
+      const drawW = player.attackTimer > 0 ? 32 : 24;
       drawSheetRegion(
         sheets.lobo,
         frameList[fIdx],
-        player.x - 4,
+        player.x - 2,
         player.y + player.h - drawH,
         drawW,
         drawH,
@@ -964,24 +906,20 @@
       ctx.fillRect(canvas.width - 134, 6, 128, 18);
 
       for (let i = 0; i < 3; i++) {
-        if (i < lives) {
-          drawPixelHeart(12 + i * 16, 8);
-        } else {
-          ctx.fillStyle = '#3a4f45';
-          ctx.fillRect(12 + i * 16, 11, 12, 10);
-        }
+        ctx.fillStyle = i < lives ? '#ff4d6d' : '#3a4f45';
+        ctx.fillRect(12 + i * 11, 11, 8, 8);
       }
 
-      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], 62, 8, 12, 14);
+      drawSheetRegion(sheets.seed, [0.22, 0.16, 0.56, 0.68], 52, 8, 12, 14);
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 10px monospace';
-      ctx.fillText(`x${String(levelData.collectedInLevel).padStart(2, '0')}`, 76, 18);
+      ctx.fillText(`x${String(levelData.collectedInLevel).padStart(2, '0')}`, 66, 18);
 
       ctx.fillStyle = '#ffcf40';
-      ctx.fillText(`1-${lvl.cfg.id}`, 110, 18);
+      ctx.fillText(`1-${lvl.cfg.id}`, 104, 18);
 
       ctx.fillStyle = '#a7f3d0';
-      ctx.fillText(String(score).padStart(6, '0'), 138, 18);
+      ctx.fillText(String(score).padStart(6, '0'), 134, 18);
 
       ctx.fillStyle = '#ffffff';
       ctx.fillText(formatTime(elapsedMs), canvas.width - 126, 18);
@@ -1015,7 +953,7 @@
 
     document.getElementById('end-title').textContent = isLast ? 'CERRADO PROTEGIDO!' : `${LEVELS[currentLevelIdx].name} CONCLUÍDA!`;
     document.getElementById('end-content').innerHTML = `
-      <p><strong>Engenheira Ambiental:</strong> "Obrigado por ajudar a preservar a biodiversidade! Cada semente faz a diferença!"</p><br>
+      <p><strong>Engenheira Ambiental:</strong> "Excelente trabalho! Essas sementes serão utilizadas para recuperar áreas degradadas do Cerrado. Cada semente faz a diferença!"</p><br>
       <p>Sementes Entregues na Fase: <strong>${levelData.collectedInLevel}</strong></p>
       <p>Bônus Sem Colisões: <strong>+${noHitBonus} pts</strong></p>
       <p>Pontuação Total: <strong>${score}</strong></p>
@@ -1097,16 +1035,11 @@
 
   document.getElementById('btn-levels').onclick = () => {
     const save = Storage.get();
-    const cards = LEVELS.map((l, idx) => {
+    const btns = LEVELS.map((l, idx) => {
       const unlocked = (idx + 1) <= save.unlockedLevel;
-      return `
-        <div class="level-card ${unlocked ? '' : 'locked'}" ${unlocked ? `onclick="window.__selectLevel(${idx})"` : ''}>
-          <span>${unlocked ? '🌿' : '🔒'} <strong>${l.name}</strong></span>
-          <span>${unlocked ? '▶ JOGAR' : 'BLOQUEADA'}</span>
-        </div>
-      `;
+      return `<p style="margin-bottom:8px;"><button ${unlocked ? '' : 'disabled'} onclick="window.__selectLevel(${idx})">${unlocked ? '▶' : '🔒'} ${l.name}</button></p>`;
     }).join('');
-    openSubMenu('SELEÇÃO DE FASES', cards);
+    openSubMenu('SELEÇÃO DE FASES', btns);
   };
   window.__selectLevel = (idx) => startRun(idx);
 
