@@ -1,0 +1,63 @@
+name: Gerar APK Aventura Cerrado
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar jogo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Preparar jogo offline
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp -r assets www/
+
+      - name: Instalar Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npx cap init "Aventura Cerrado" "br.com.aventuracerrado" --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: Configurar modo horizontal
+        run: |
+          sed -i 's/android:name=".MainActivity"/android:name=".MainActivity" android:screenOrientation="landscape"/' android/app/src/main/AndroidManifest.xml
+          sed -i '/android.permission.INTERNET/d' android/app/src/main/AndroidManifest.xml
+
+      - name: Compilar APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Disponibilizar APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk Aventura-Cerrado.apk
+
+      - name: Enviar APK para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aventura-Cerrado
+          path: Aventura-Cerrado.apk
