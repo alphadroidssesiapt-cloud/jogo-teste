@@ -293,6 +293,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 (() => {
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
+  const VIEW_W = 480, VIEW_H = 270;
   ctx.imageSmoothingEnabled = false;
 
   let playMode = 'celular';
@@ -639,39 +640,45 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
   const keys = {};
   const touchState = { left: false, right: false, down: false };
 
+  const mobilePointers = new Map();
+  function refreshMobileDirections() {
+    for (const k of ['left','right','down']) touchState[k] = [...mobilePointers.values()].includes(k);
+  }
   function bindTouchButton(id, keyName) {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); touchState[keyName] = true; if (keyName === 'jump') tryJump(); if (keyName === 'attack') tryAttack(); }, {passive: false});
-    el.addEventListener('touchcancel', () => { touchState[keyName] = false; });
-    el.addEventListener('touchend', (e) => { e.preventDefault(); touchState[keyName] = false; }, {passive: false});
-    el.addEventListener('mousedown', (e) => { e.preventDefault(); touchState[keyName] = true; if (keyName === 'jump') tryJump(); if (keyName === 'attack') tryAttack(); });
-    el.addEventListener('mouseup', (e) => { e.preventDefault(); touchState[keyName] = false; });
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (state !== 'PLAY' || mobilePointers.has(e.pointerId)) return;
+      mobilePointers.set(e.pointerId, keyName);
+      el.setPointerCapture(e.pointerId);
+      refreshMobileDirections();
+      if (keyName === 'jump') tryJump();
+      if (keyName === 'attack') tryAttack();
+    });
+    el.addEventListener('pointermove', e => {
+      const old = mobilePointers.get(e.pointerId);
+      if (!['left','right','down'].includes(old)) return;
+      const target = document.elementFromPoint(e.clientX,e.clientY)?.closest('.t-btn');
+      const next = {'btn-left':'left','btn-right':'right','btn-down':'down','btn-up':'jump'}[target?.id];
+      if (next && next !== old) {
+        mobilePointers.set(e.pointerId,next); refreshMobileDirections();
+        if(next === 'jump' && state === 'PLAY') tryJump();
+      }
+    });
+    const release = e => { mobilePointers.delete(e.pointerId); refreshMobileDirections(); };
+    for(const event of ['pointerup','pointercancel','lostpointercapture']) el.addEventListener(event,release);
   }
-
-  bindTouchButton('btn-up', 'jump');
-  bindTouchButton('btn-left', 'left');
-  bindTouchButton('btn-right', 'right');
-  bindTouchButton('btn-down', 'down');
-  bindTouchButton('btn-jump', 'jump');
-  const bButton = document.getElementById('btn-attack');
-  let bPointer = null, bStart = 0, bMoved = false;
-  bButton.setAttribute('aria-label','Toque para chutar; segure para agachar');
-  bButton.addEventListener('pointerdown', e => {
-    e.preventDefault(); if (state !== 'PLAY' || bPointer !== null) return;
-    bPointer=e.pointerId; bStart=performance.now(); bMoved=false; touchState.b=true;
-    bButton.setPointerCapture(e.pointerId);
-  });
-  function releaseB(e, attack) {
-    if(e.pointerId !== bPointer) return;
-    const quick=performance.now()-bStart<220 && !bMoved;
-    bPointer=null; touchState.b=false;
-    if(attack && quick && state==='PLAY') tryAttack();
-  }
-  bButton.addEventListener('pointerup',e=>releaseB(e,true));
-  bButton.addEventListener('pointercancel',e=>releaseB(e,false));
-  bButton.addEventListener('lostpointercapture',e=>releaseB(e,false));
-  window.addEventListener('blur',()=>{bPointer=null; Object.keys(touchState).forEach(k=>touchState[k]=false);});
+  bindTouchButton('btn-up','jump');
+  bindTouchButton('btn-left','left');
+  bindTouchButton('btn-right','right');
+  bindTouchButton('btn-down','down');
+  bindTouchButton('btn-jump','jump');
+  bindTouchButton('btn-attack','attack');
+  document.getElementById('btn-attack').setAttribute('aria-label','Atacar imediatamente');
+  function clearMobileInput(){mobilePointers.clear();refreshMobileDirections();}
+  window.addEventListener('blur',clearMobileInput);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMobileInput();});
 
   document.getElementById('btn-pause-mob').onclick = () => {
     if (state === 'PLAY') setPause(true);
@@ -917,8 +924,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
     const left = keys['a'] || keys['arrowleft'] || touchState.left || padState.left;
     const right = keys['d'] || keys['arrowright'] || touchState.right || padState.right;
-    if(touchState.b && (left || right)) bMoved=true;
-    const down = keys['s'] || keys['arrowdown'] || touchState.down || touchState.b || padState.down;
+    const down = keys['s'] || keys['arrowdown'] || touchState.down || padState.down;
 
     if (down && player.onGround) {
       if (!player.crouching) {
@@ -941,7 +947,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       player.vx = moveSpeed * speedFactor;
       player.facing = 1;
     } else {
-      player.vx *= 0.72;
+      player.vx *= mobilePointers.size ? 0.45 : 0.72;
       if (Math.abs(player.vx) < 4) player.vx = 0;
     }
 
@@ -996,7 +1002,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if (player.onGround && !levelData.pits.some(p => player.x < p.x+p.w+12 && player.x+player.w > p.x-12) && Math.abs(player.y+player.h-floorAt(player.x))<3) {
       player.safeX = player.x;
     }
-    if (!Number.isFinite(player.y) || !Number.isFinite(player.x) || player.y > canvas.height + 20) {
+    if (!Number.isFinite(player.y) || !Number.isFinite(player.x) || player.y > VIEW_H + 20) {
       damagePlayer(true);
       return;
     }
@@ -1068,7 +1074,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
             obs.y = nextSurface-obs.h;
             obs.vy = 0;
           }
-          if (obs.y > canvas.height+40) { obs.defeated = true; continue; }
+          if (obs.y > VIEW_H+40) { obs.defeated = true; continue; }
         }
       }
 
@@ -1111,11 +1117,11 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
 
     const targetCam = player.x - 130;
-    cameraX += (Math.max(0, Math.min(levelData.cfg.length - canvas.width, targetCam))-cameraX)*Math.min(1,dt*10);
+    cameraX += (Math.max(0, Math.min(levelData.cfg.length - VIEW_W, targetCam))-cameraX)*Math.min(1,dt*10);
 
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
-      if (levelData.cfg.id >= 4) cameraX = Math.max(0, levelData.cfg.length - canvas.width);
+      if (levelData.cfg.id >= 4) cameraX = Math.max(0, levelData.cfg.length - VIEW_W);
       player.crouching = false;
       player.h = 44;
       player.y = GROUND_Y - 44;
@@ -1153,7 +1159,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       player.jumpsLeft = 2;
       player.attackTimer = 0;
       player.safeX = x;
-      cameraX = Math.max(0, Math.min(levelData.cfg.length-canvas.width,x-130));
+      cameraX = Math.max(0, Math.min(levelData.cfg.length-VIEW_W,x-130));
     }
     player.invulnTimer = 1.5;
     // Dano normal não modifica a posição nem a velocidade vertical.
@@ -1179,14 +1185,20 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
   const bgCache = {};
   function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     const lvl = levelData || buildLevel(0);
+    const renderScale = lvl.cfg.id === 4 ? 4 : 1;
+    if (canvas.width !== VIEW_W * renderScale || canvas.height !== VIEW_H * renderScale) {
+      canvas.width = VIEW_W * renderScale;
+      canvas.height = VIEW_H * renderScale;
+    }
+    ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
     const bgNorm = CERRADO_SPRITES[lvl.cfg.bgKey];
 
     const dead = lvl.cfg.id === 5;
     const landscape = sheets['landscape' + (dead ? 1 : lvl.cfg.id)];
-    const bgW = landscape ? Math.max(canvas.width, Math.round(GROUND_Y * landscape.width / landscape.height * 0.85)) : canvas.width;
+    const bgW = landscape ? Math.max(VIEW_W, Math.round(GROUND_Y * landscape.width / landscape.height * 0.85)) : VIEW_W;
     const parallaxOffset = Math.floor((cameraX * 0.25) % bgW);
     if (!bgCache[lvl.cfg.bgKey] && landscape) {
       bgCache[lvl.cfg.bgKey] = createFallbackCanvas(bgW, GROUND_Y, (g,w,h) => {
@@ -1205,27 +1217,27 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     ctx.translate(-Math.floor(cameraX), 0);
     if(dead) ctx.filter = "grayscale(.9) sepia(.25)";
 
-    if(dead) { ctx.save(); ctx.strokeStyle='#51443c'; ctx.lineWidth=3; for(let x=120;x<lvl.cfg.length;x+=230){ if(x<cameraX-50||x>cameraX+canvas.width+50) continue; const y=terrainSurface(lvl.platforms,x); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+3,y-48); ctx.lineTo(x-14,y-65); ctx.moveTo(x+3,y-35); ctx.lineTo(x+22,y-54); ctx.moveTo(x+3,y-48); ctx.lineTo(x+10,y-73); ctx.stroke(); } ctx.restore(); }
+    if(dead) { ctx.save(); ctx.strokeStyle='#51443c'; ctx.lineWidth=3; for(let x=120;x<lvl.cfg.length;x+=230){ if(x<cameraX-50||x>cameraX+VIEW_W+50) continue; const y=terrainSurface(lvl.platforms,x); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+3,y-48); ctx.lineTo(x-14,y-65); ctx.moveTo(x+3,y-35); ctx.lineTo(x+22,y-54); ctx.moveTo(x+3,y-48); ctx.lineTo(x+10,y-73); ctx.stroke(); } ctx.restore(); }
     const tileW = 64;
     const firstTile = Math.floor(cameraX / tileW) * tileW;
-    for (let tx = firstTile; tx < cameraX + canvas.width + tileW; tx += tileW) {
+    for (let tx = firstTile; tx < cameraX + VIEW_W + tileW; tx += tileW) {
       ctx.save();
       ctx.beginPath();
       let cursor = tx;
       for (const p of lvl.pits) {
         if (p.x + p.w <= tx || p.x >= tx + tileW) continue;
         const edge = Math.max(tx,p.x);
-        if (edge > cursor) ctx.rect(cursor,GROUND_Y,edge-cursor,canvas.height-GROUND_Y);
+        if (edge > cursor) ctx.rect(cursor,GROUND_Y,edge-cursor,VIEW_H-GROUND_Y);
         cursor = Math.max(cursor,p.x+p.w);
       }
-      if (cursor < tx+tileW) ctx.rect(cursor,GROUND_Y,tx+tileW-cursor,canvas.height-GROUND_Y);
+      if (cursor < tx+tileW) ctx.rect(cursor,GROUND_Y,tx+tileW-cursor,VIEW_H-GROUND_Y);
       ctx.clip();
-      drawSheetRegion(sheets.terrain || sheets.cerrado, sheets.terrain ? [35/2048,76/682,220/2048,103/682] : CERRADO_SPRITES.tile_ground, tx, GROUND_Y, tileW, canvas.height - GROUND_Y);
+      drawSheetRegion(sheets.terrain || sheets.cerrado, sheets.terrain ? [35/2048,76/682,220/2048,103/682] : CERRADO_SPRITES.tile_ground, tx, GROUND_Y, tileW, VIEW_H - GROUND_Y);
       ctx.restore();
     }
     for (const p of lvl.pits) {
-      if (p.x+p.w < cameraX || p.x > cameraX+canvas.width) continue;
-      const shadow = ctx.createLinearGradient(0,GROUND_Y,0,canvas.height); shadow.addColorStop(0,'#39251c'); shadow.addColorStop(1,'#080b0c'); ctx.fillStyle=shadow; ctx.fillRect(p.x,GROUND_Y,p.w,canvas.height-GROUND_Y); ctx.fillStyle='#80502e'; ctx.fillRect(p.x,GROUND_Y,3,canvas.height-GROUND_Y); ctx.fillRect(p.x+p.w-3,GROUND_Y,3,canvas.height-GROUND_Y);
+      if (p.x+p.w < cameraX || p.x > cameraX+VIEW_W) continue;
+      const shadow = ctx.createLinearGradient(0,GROUND_Y,0,VIEW_H); shadow.addColorStop(0,'#39251c'); shadow.addColorStop(1,'#080b0c'); ctx.fillStyle=shadow; ctx.fillRect(p.x,GROUND_Y,p.w,VIEW_H-GROUND_Y); ctx.fillStyle='#80502e'; ctx.fillRect(p.x,GROUND_Y,3,VIEW_H-GROUND_Y); ctx.fillRect(p.x+p.w-3,GROUND_Y,3,VIEW_H-GROUND_Y);
     }
 
     for (const plat of lvl.platforms) {
@@ -1312,7 +1324,14 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       for (const [key, offset, name] of [['cassidy', 0, 'Cassidy'], ['theodoro', 55, 'Theodoro']]) {
         const img = sheets[key];
         const x = lvl.npcX + offset;
-        if (img) { const w = 64 * img.width / img.height; ctx.drawImage(img, Math.round(x + (40-w)/2), GROUND_Y-64, Math.round(w), 64); }
+        if (img) {
+          const w = 64 * img.width / img.height;
+          ctx.save();
+          ctx.imageSmoothingEnabled = lvl.cfg.id === 4;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, Math.round(x + (40-w)/2), GROUND_Y-64, Math.round(w), 64);
+          ctx.restore();
+        }
         ctx.font = 'bold 8px monospace'; ctx.fillStyle = '#fff3b0'; ctx.textAlign = 'center'; ctx.fillText(name, x+20, GROUND_Y-70); ctx.textAlign = 'left';
       }
     } else drawSheetRegion(sheets.npc, npcPose, lvl.npcX, GROUND_Y - 58, 32, 58, true);
@@ -1371,7 +1390,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     ctx.restore();
 
     if (state === 'DELIVER' && creatorEnding) {
-      const bx = 16, by = 32, bw = canvas.width - 32;
+      const bx = 16, by = 32, bw = VIEW_W - 32;
       const secretEnding = lvl.cfg.id === 5;
       const boxH = secretEnding ? 98 : 72;
       ctx.fillStyle = 'rgba(10,20,16,.96)'; ctx.fillRect(bx,by,bw,boxH);
@@ -1393,7 +1412,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if (state === 'PLAY' || state === 'DELIVER') {
       ctx.fillStyle = 'rgba(10, 22, 16, 0.55)';
       ctx.fillRect(6, 6, 178, 18);
-      ctx.fillRect(canvas.width - 134, 6, 128, 18);
+      ctx.fillRect(VIEW_W - 134, 6, 128, 18);
 
       for (let i = 0; i < 3; i++) {
         if (i < lives) {
@@ -1416,7 +1435,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       ctx.fillText(String(score).padStart(6, '0'), 138, 18);
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(formatTime(elapsedMs), canvas.width - 126, 18);
+      ctx.fillText(formatTime(elapsedMs), VIEW_W - 126, 18);
     }
   }
 
