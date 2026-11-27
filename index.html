@@ -1028,6 +1028,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     for (const obs of levelData.obstacles) {
       if (obs.defeated) continue;
       if (obs.type === 'roller' || obs.type === 'bird') {
+        const previousObstacleX = obs.x, movementVX = obs.vx;
         obs.x += obs.vx * dt;
         if (obs.x < obs.baseX - 95) { obs.x = obs.baseX - 95; obs.vx = Math.abs(obs.vx); }
         if (obs.x > obs.baseX + 95) { obs.x = obs.baseX + 95; obs.vx = -Math.abs(obs.vx); }
@@ -1048,7 +1049,27 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
           }
           obs.y = targetY;
         }
-        else { const hill=levelData.platforms.find(p=>p.hill && obs.x+obs.w/2>p.x && obs.x+obs.w/2<p.x+p.w); obs.y=(hill?hillSurface(hill,obs.x+obs.w/2):GROUND_Y)-obs.h; }
+        else {
+          const foot = obs.y + obs.h;
+          const cx = obs.x + obs.w/2;
+          const pit = levelData.pits.some(p => cx > p.x && cx < p.x+p.w);
+          const surface = terrainSurface(levelData.platforms,cx);
+          // Never snap upward onto a higher ledge; bounce off its side.
+          if (surface < foot - 0.5 && (!pit || surface < GROUND_Y)) {
+            obs.x = previousObstacleX;
+            obs.vx = -movementVX;
+          }
+          const nextCX = obs.x + obs.w/2;
+          const nextSurface = terrainSurface(levelData.platforms,nextCX);
+          const overHole = levelData.pits.some(p => nextCX > p.x && nextCX < p.x+p.w);
+          obs.vy = (obs.vy || 0) + 860*dt;
+          obs.y += obs.vy*dt;
+          if ((!overHole || nextSurface < GROUND_Y) && foot <= nextSurface + 0.5 && obs.y+obs.h >= nextSurface) {
+            obs.y = nextSurface-obs.h;
+            obs.vy = 0;
+          }
+          if (obs.y > canvas.height+40) { obs.defeated = true; continue; }
+        }
       }
 
       if (kickBox && obs.type === 'roller' && rectsOverlap(kickBox, obs)) {
