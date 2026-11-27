@@ -1030,7 +1030,22 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
         if (obs.x < obs.baseX - 95) { obs.x = obs.baseX - 95; obs.vx = Math.abs(obs.vx); }
         if (obs.x > obs.baseX + 95) { obs.x = obs.baseX + 95; obs.vx = -Math.abs(obs.vx); }
         obs.anim = (obs.anim || 0) + dt;
-        if (obs.type === 'bird') { obs.y = obs.baseY + Math.sin(obs.anim * 3) * 4; }
+        if (obs.type === 'bird') {
+          const normalY = obs.baseY + Math.sin(obs.anim * 3) * 4;
+          let targetY = normalY;
+          // Antecipar obstáculos e subir apenas nas proximidades.
+          for (const p of [...levelData.platforms, ...levelData.blocks]) {
+            const gap = Math.max(0, p.x - (obs.x + obs.w + 2), obs.x - 2 - (p.x + p.w));
+            if (gap >= 48) continue;
+            const top = p.y;
+            if (!p.hill && normalY - 5 >= top + p.h + 6) continue;
+            const safeY = top - 35;
+            const t = 1 - gap / 48;
+            const blend = t * t * (3 - 2 * t);
+            targetY = Math.min(targetY, normalY + Math.min(0, safeY - normalY) * blend);
+          }
+          obs.y = targetY;
+        }
         else { const hill=levelData.platforms.find(p=>p.hill && obs.x+obs.w/2>p.x && obs.x+obs.w/2<p.x+p.w); obs.y=(hill?hillSurface(hill,obs.x+obs.w/2):GROUND_Y)-obs.h; }
       }
 
