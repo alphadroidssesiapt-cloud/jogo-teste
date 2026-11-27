@@ -953,7 +953,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const overPit = levelData.pits.some(p => centerFoot > p.x + 3 && centerFoot < p.x + p.w - 3);
 
     const surface=terrainSurface(levelData.platforms,centerFoot);
-    if (!overPit && player.vy >= 0 && prevBottom <= surface + 4 && player.y + player.h >= surface) {
+    if (!overPit && player.vy >= 0 && player.y + player.h >= surface && (prevBottom <= surface + 4 || player.y + player.h >= GROUND_Y)) {
       player.y = surface - player.h;
       player.vy = 0;
       player.onGround = true;
@@ -991,6 +991,13 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       }
     }
 
+    // Recupera penetração no solo sólido sem descontar vida.
+    if (!overPit && player.y + player.h > GROUND_Y) {
+      player.y = surface - player.h;
+      player.vy = 0;
+      player.onGround = true;
+      player.jumpsLeft = 2;
+    }
     if (player.onGround && !levelData.pits.some(p => player.x < p.x+p.w+12 && player.x+player.w > p.x-12) && Math.abs(player.y+player.h-surface)<3) {
       player.safeX = player.x;
     }
@@ -1120,6 +1127,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       cameraX = Math.max(0, Math.min(levelData.cfg.length-canvas.width,x-130));
     }
     player.invulnTimer = 1.5;
+    // Dano normal não modifica a posição nem a velocidade vertical.
   }
 
   function updateParticles(dt) {
@@ -1575,7 +1583,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
   function loop(ts) {
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
-    update(dt);
+    const steps = Math.max(1, Math.ceil(dt / (1/120)));
+    for (let i=0; i<steps; i++) update(dt/steps);
     render();
     requestAnimationFrame(loop);
   }
