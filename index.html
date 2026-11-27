@@ -915,10 +915,10 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const mult = DIFF_MULT[difficulty];
     const moveSpeed = 160 * mult;
 
-    const left = keys['a'] || keys['arrowleft'] || touchState.left;
-    const right = keys['d'] || keys['arrowright'] || touchState.right;
+    const left = keys['a'] || keys['arrowleft'] || touchState.left || padState.left;
+    const right = keys['d'] || keys['arrowright'] || touchState.right || padState.right;
     if(touchState.b && (left || right)) bMoved=true;
-    const down = keys['s'] || keys['arrowdown'] || touchState.down || touchState.b;
+    const down = keys['s'] || keys['arrowdown'] || touchState.down || touchState.b || padState.down;
 
     if (down && player.onGround) {
       if (!player.crouching) {
@@ -926,7 +926,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
         player.y += 16;
         player.h = 28;
       }
-    } else if (player.crouching && ![...levelData.blocks,...levelData.platforms.filter(p=>!p.hill)].some(b=>rectsOverlap({x:player.x,y:player.y-16,w:player.w,h:16},b))) {
+    } else if (player.crouching && ![...levelData.blocks].some(b=>rectsOverlap({x:player.x,y:player.y-16,w:player.w,h:16},b))) {
       player.crouching = false;
       player.y -= 16;
       player.h = 44;
@@ -954,7 +954,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     else player.animTimer += dt;
 
     // Colisão por eixos, com superfícies sólidas e bordas dos buracos.
-    const solids = [...levelData.platforms.filter(p=>!p.hill || p.step), ...levelData.blocks];
+    const solids = [...levelData.platforms.filter(p=>p.step), ...levelData.blocks];
+    const landingSurfaces = [...solids, ...levelData.platforms.filter(p=>!p.hill && !p.step)];
     const overlapX = (p,x=player.x)=>x<p.x+p.w-0.001 && x+player.w>p.x+0.001;
     const floorAt = x=>footSurface(x,player.w);
     const oldX=player.x, oldY=player.y, oldBottom=oldY+player.h;
@@ -981,7 +982,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if(dy>=0) {
       const floor=floorAt(player.x);
       if(!pitAt(player.x) && prevBottom<=floor+0.01 && target+player.h>=floor) {target=floor-player.h;hit='floor';}
-      for(const p of solids) if(overlapX(p) && prevBottom<=p.y+0.01 && target+player.h>=p.y) {target=p.y-player.h;hit=p;}
+      for(const p of landingSurfaces) if(overlapX(p) && prevBottom<=p.y+0.01 && target+player.h>=p.y) {target=p.y-player.h;hit=p;}
       if(hit) {player.vy=0;player.onGround=true;player.jumpsLeft=2;}
     } else {
       for(const p of solids) if(overlapX(p) && prevTop>=p.y+p.h-0.01 && target<=p.y+p.h) {target=p.y+p.h;hit=p;}
@@ -1624,12 +1625,28 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     artMenu('OPÇÕES','Menu de opções no Cerrado-1.png',7,78,`<select id="difficulty-choice" aria-label="Dificuldade"><option value="facil">Dificuldade: Fácil</option><option value="normal">Dificuldade: Normal</option><option value="dificil">Dificuldade: Difícil</option></select><button id="btn-levels">Escolher fase</button>`);
     const d=document.getElementById('difficulty-choice');d.value=difficulty;d.onchange=()=>difficulty=d.value;document.getElementById('btn-levels').onclick=showLevels;
   };
-  document.getElementById('btn-howto').onclick=()=>artMenu('COMO JOGAR','Galeria de conquistas do Cerrado-4.png',7,86,[['Mover','PC: A/D • Celular: ◁ ▷'],['Pular','PC: W/Espaço • Celular: A ou △'],['Agachar','PC: S • Celular: segure B ou ▽'],['Andar agachado','Segure B + seta direcional'],['Chutar','PC: J/Z • Celular: toque rápido em B'],['Objetivo','Colete sementes e desvie dos animais']].map((a,i)=>row(30.7+i*7.8,`<strong>${a[0]}</strong><small>${a[1]}</small>`)).join(''));
+  document.getElementById('btn-howto').onclick=()=>artMenu('COMO JOGAR','Galeria de conquistas do Cerrado-4.png',7,86,[['Mover','PC: A/D • PS3: analógico/D-pad • Celular: ◁ ▷'],['Pular','PC: W/Espaço • PS3: X ou cima • Celular: A ou △'],['Agachar','PC: S • Celular: segure B ou ▽'],['Andar agachado','Segure B + seta direcional'],['Chutar','PC: J/Z • PS3: ○ • Celular: toque rápido em B'],['Objetivo','Colete sementes e desvie dos animais']].map((a,i)=>row(30.7+i*7.8,`<strong>${a[0]}</strong><small>${a[1]}</small>`)).join(''));
+
+  const padState = {left:false,right:false,down:false,jump:false,attack:false,pause:false};
+  function pollGamepad() {
+    const pad = Array.from(navigator.getGamepads?.() || []).find(p=>p && p.connected);
+    const pressed = i => !!pad?.buttons[i]?.pressed;
+    const x = pad?.axes[0] || 0, y = pad?.axes[1] || 0;
+    const next = {left:x < -0.35 || pressed(14),right:x > 0.35 || pressed(15),down:y > 0.35 || pressed(13),jump:pressed(0)||pressed(12)||y < -0.65,attack:pressed(1),pause:pressed(9)};
+    if(next.pause && !padState.pause) {if(state==='PLAY') setPause(true); else if(state==='PAUSE') setPause(false);}
+    if(state==='PLAY') {
+      if(next.jump && !padState.jump) tryJump();
+      if(!next.jump && padState.jump && player.vy < -110) player.vy *= 0.55;
+      if(next.attack && !padState.attack) tryAttack();
+    } else if(state==='END' && next.jump && !padState.jump) document.getElementById('btn-next').click();
+    Object.assign(padState,next);
+  }
 
   let lastTs = performance.now();
   function loop(ts) {
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
+    pollGamepad();
     const steps = Math.max(1, Math.ceil(dt / (1/120)));
     for (let i=0; i<steps; i++) {
       const before = state;
