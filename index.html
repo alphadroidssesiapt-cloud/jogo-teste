@@ -304,6 +304,9 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     landscape3: exactLandscape,
     landscape2: exactLandscape,
     landscape1: exactLandscape,
+    wolf_start: 'assets/lobo-parado-para-movimento.png',
+    wolf_low: 'assets/lobo-andando-agachado.png',
+    wolf_lowwalk: 'assets/Lobo agachado em caminhada, 8 quadros.png',
     wolf_idle: 'assets/Animação Pixel Art de Lobo Husky-1.png',
     wolf_walk: 'assets/Ciclo de Caminhada do Lobo Pixelado-2.png',
     wolf_run: 'assets/Sprite de Corrida do Lobo Pixelado-3.png',
@@ -341,7 +344,9 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], gr = d[i + 1], b = d[i + 2];
-      if (type === 'wolf_walk') {
+      if (type === 'wolf_start' || type === 'wolf_low') {
+        if (d[i+3] < 120) d[i+3]=0;
+      } else if (type === 'wolf_walk') {
         if (Math.min(r,gr,b)>180 && Math.max(r,gr,b)-Math.min(r,gr,b)<22) d[i+3]=0;
       } else if (type === 'lobo') {
         if (type === 'seed' && r > 242 && gr > 242 && b > 242) d[i + 3] = 0;
@@ -738,7 +743,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     for (let x = 260; x < cfg.length - 360; x += 270) {
       const py = (x % 540 === 0) ? 140 : 162;
       platforms.push({ x, y: py, w: 70, h: 16 });
-      blocks.push({ x: x + 26, y: py - 46, w: 18, h: 18, hit: false, bounce: 0 });
+      blocks.push({ x: x + 26, y: py - 64, w: 18, h: 18, hit: false, bounce: 0 });
       seeds.push({ x: x + 10, y: py - 20, collected: false, bob: x * 0.02 });
       seeds.push({ x: x + 44, y: py - 20, collected: false, bob: x * 0.02 + 1 });
     }
@@ -884,7 +889,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if (player.attackTimer > 0) player.attackTimer -= dt;
     if (player.invulnTimer > 0) player.invulnTimer -= dt;
     if (player.standTimer > 0) player.standTimer -= dt;
-    const pose = player.attackTimer > 0 ? 'attack' : !player.onGround ? 'jump' : player.crouching ? 'crouch' : Math.abs(player.vx) > 110 ? 'run' : Math.abs(player.vx) > 8 ? 'walk' : 'idle';
+    let pose = player.attackTimer > 0 ? 'attack' : !player.onGround ? 'jump' : player.crouching ? (Math.abs(player.vx)>8 ? 'lowwalk' : 'crouch') : Math.abs(player.vx) > 110 ? 'run' : Math.abs(player.vx) > 8 ? 'walk' : 'idle';
+    if ((pose==='run'||pose==='walk') && sheets.wolf_start && (player.pose==='idle'||(player.pose==='start'&&player.animTimer<7/18))) pose='start';
     if (player.pose !== pose) { player.pose = pose; player.animTimer = 0; }
     else player.animTimer += dt;
 
@@ -919,6 +925,10 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
     for (const blk of levelData.blocks) {
       if (blk.bounce > 0) blk.bounce = Math.max(0, blk.bounce - dt * 24);
+      if (player.vy >= 0 && prevBottom <= blk.y + 4 && player.y + player.h >= blk.y && player.x + player.w > blk.x + 2 && player.x < blk.x + blk.w - 2) {
+        player.y = blk.y - player.h; player.vy = 0; player.onGround = true; player.jumpsLeft = 2;
+        if (!blk.hit) { blk.hit = true; blk.bounce = 5; AudioFX.block(); levelData.seeds.push({x:blk.x+2,y:blk.y-20,collected:false,bob:0}); }
+      }
       if (player.vy < 0 && prevTop >= blk.y + blk.h - 4 && player.y <= blk.y + blk.h &&
           player.x + player.w > blk.x + 2 && player.x < blk.x + blk.w - 2) {
         player.y = blk.y + blk.h;
@@ -1063,7 +1073,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const parallaxOffset = Math.floor((cameraX * 0.25) % bgW);
     if (!bgCache[lvl.cfg.bgKey] && landscape) {
       bgCache[lvl.cfg.bgKey] = createFallbackCanvas(bgW, GROUND_Y, (g,w,h) => {
-        g.filter = 'blur(0.65px)';
+        g.filter = 'blur(0.22px)';
         if (landscape) g.drawImage(landscape,-4,-4,w+8,h+8);
         else {
           const [x,y,r,t] = bgNorm;
@@ -1167,13 +1177,22 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
     if (!(player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0)) {
       const pose = player.pose || 'idle';
-      const fps = {idle:5,walk:10,run:14,jump:12,crouch:14,attack:32}[pose];
+      const fps = {idle:5,walk:10,run:14,jump:12,crouch:14,attack:32,start:18,lowwalk:12}[pose];
       let frame = Math.floor(player.animTimer * fps) % 8;
       if (pose === 'crouch') frame = Math.min(4, Math.floor(player.animTimer * fps));
       if (pose === 'attack') frame = Math.min(7, Math.floor(player.animTimer * fps));
       if (pose === 'jump') frame = player.vy < 0 ? Math.min(4, 1+Math.floor(player.animTimer*12)) : Math.min(7, 5+Math.floor(Math.max(0,player.vy)/150));
+      if (pose==='start') frame=Math.min(7,Math.floor(player.animTimer*18));
+      const special = pose==='start' ? sheets.wolf_start : pose==='lowwalk' ? (sheets.wolf_lowwalk || sheets.wolf_low) : null;
       const sheet = sheets['wolf_'+pose];
-      if (sheet) {
+      if (special) {
+        const tall = pose==='start', lowFallback = !tall && special===sheets.wolf_low;
+        const top = tall ? 45/341 : lowFallback ? 74/341 : 245/682;
+        const height = tall ? 276/341 : lowFallback ? 230/341 : 195/682;
+        const dh = tall ? 46 : lowFallback ? 32 : 29;
+        const dw = dh * (special.width/8)/(special.height*height);
+        drawSheetRegion(special,[frame/8,top,1/8,height],player.x+player.w/2-dw/2,player.y+player.h-dh,dw,dh,player.facing===-1);
+      } else if (sheet && wolfBoxes['wolf_'+pose]) {
         const [sx,sy,sw,sh] = wolfBoxes['wolf_'+pose][frame];
         const scale = 46 / 345;
         const dw = sw * scale, dh = sh * scale;
