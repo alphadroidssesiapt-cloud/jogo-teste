@@ -219,6 +219,12 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 #menu-sub.art select {position:absolute;left:40%;top:39%;width:27%;height:7.5%;font: bold 2cqw monospace;color:#48260e;background:transparent;border:0;padding:0 2%;touch-action:auto;}
 #menu-sub.art #btn-levels {position:absolute;left:32%;top:51%;width:36%;height:11%;background:transparent;border:0;box-shadow:none;color:#fff1c6;font-size:2.3cqw;padding-left:7%;}
 #menu-sub.art #btn-levels:hover {color:#ffdf43;transform:none;}
+
+#menu-end.champion {background-image:url("assets/Lobo Guardião ao Pôr do Sol.png");}
+#menu-end.champion #end-title {top:73%;left:28%;width:44%;font-size:2.8cqw;color:#592800;text-shadow:0 1px #ffe88c;}
+#menu-end.champion #end-content {top:39%;left:7%;width:23%;height:23%;background:rgba(35,19,45,.88);border:2px solid #e6aa38;border-radius:8px;font-size:1.7cqw;color:#ffe69a;}
+#menu-end.champion .menu-grid button {top:86%;height:8%;background:#74390f;border:2px solid #ffc34e;font-size:1.6cqw;}
+#menu-end.champion .menu-grid button:hover {background:#ffcf40;color:#291536;}
 </style>
 </head>
 <body>
@@ -492,17 +498,27 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
       block: () => tone(310, 0.09, 'square', 0.06, 120),
       hit: () => tone(130, 0.25, 'sawtooth', 0.08, -80),
       win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'square', 0.06), i * 110)),
-      startBGM() {
-        ensure();
-        if (bgmInterval) return;
-        const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63];
-        let idx = 0;
-        bgmInterval = setInterval(() => {
-          if (Math.random() < 0.7) {
-            tone(notes[idx % notes.length], 0.25, 'triangle', 0.03);
-          }
-          idx++;
-        }, 320);
+      startBGM(stage = 0) {
+        this.stopBGM();
+        try { ensure(); } catch (_) { return; }
+        const tracks = [
+          [230,[72,76,79,76,74,77,81,79,76,74,72,67,69,72,74,0],[48,53,55,48]],
+          [280,[69,72,76,0,71,72,67,64,65,69,72,0,67,65,64,0],[45,43,41,40]],
+          [350,[74,78,81,0,76,74,69,0,71,74,78,76,74,69,66,0],[50,47,43,45]],
+          [190,[64,67,71,67,64,76,74,71,65,69,72,69,67,71,74,0],[40,40,41,43]],
+          [210,[72,72,76,79,84,0,81,79,77,81,84,0,79,83,86,84,0,0,0,0],[48,53,55,48,48]]
+        ];
+        const [beat,notes,bass] = tracks[stage] || tracks[0];
+        const hz = n => 440 * Math.pow(2,(n-69)/12);
+        let i = 0;
+        const tick = () => {
+          if (stage === 4 && i >= notes.length) { this.stopBGM(); return; }
+          const n = notes[i % notes.length];
+          if (n) tone(hz(n),beat/1000*.85,stage===4?'square':'triangle',0.035);
+          if (i%4===0) tone(hz(bass[Math.floor(i/4)%bass.length]),beat/1000*2.8,'triangle',0.035);
+          i++;
+        };
+        tick(); bgmInterval=setInterval(tick,beat);
       },
       stopBGM() {
         if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
@@ -771,12 +787,12 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
     totalRunDelivered = 0;
     runStartTime = performance.now();
     elapsedMs = 0;
-    AudioFX.startBGM();
     startLevel(levelIdx);
   }
 
   function startLevel(idx) {
     currentLevelIdx = idx;
+    AudioFX.startBGM(idx);
     levelData = buildLevel(idx);
     levelHits = 0;
     cameraX = 0;
@@ -1196,6 +1212,8 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 
   function finishLevelDialog() {
     state = 'END';
+    AudioFX.stopBGM();
+    document.getElementById('menu-end').classList.remove('champion');
     document.getElementById('touch-controls').classList.remove('active');
     const levelBonus = 500;
     const noHitBonus = levelHits === 0 ? 400 : 0;
@@ -1228,6 +1246,12 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
       <p>TEMPO: ${formatTime(elapsedMs)}</p>
       <p>SEMENTES: ${levelData.collectedInLevel}</p>
     `;
+    if (isLast && runInitialLevel === 0) {
+      document.getElementById('menu-end').classList.add('champion');
+      document.getElementById('end-title').textContent = 'GUARDIÃO DO CERRADO!';
+      document.getElementById('end-content').innerHTML = `<p>4 FASES CONCLUÍDAS</p><p>TEMPO: ${formatTime(elapsedMs)}</p><p>SEMENTES: ${totalRunSeeds}</p><p>PONTOS: ${score}</p>`;
+      AudioFX.startBGM(4);
+    }
     const btnNext = document.getElementById('btn-next');
     btnNext.textContent = isLast ? 'JOGAR NOVAMENTE' : 'PRÓXIMA FASE';
     btnNext.onclick = () => isLast ? startRun(0) : startLevel(currentLevelIdx + 1);
@@ -1236,6 +1260,8 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 
   function endGame(won) {
     state = 'END';
+    AudioFX.stopBGM();
+    document.getElementById('menu-end').classList.remove('champion');
     document.getElementById('touch-controls').classList.remove('active');
     AudioFX.stopBGM();
     saveRunRecord(false);
@@ -1276,10 +1302,12 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 
   function setPause(paused) {
     if (paused) {
+      AudioFX.stopBGM();
       state = 'PAUSE';
       document.getElementById('touch-controls').classList.remove('active');
       document.getElementById('menu-pause').classList.remove('hidden');
     } else {
+      AudioFX.startBGM(currentLevelIdx);
       state = 'PLAY';
       if (playMode === 'celular') document.getElementById('touch-controls').classList.add('active');
       document.getElementById('menu-pause').classList.add('hidden');
@@ -1322,7 +1350,7 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
   document.getElementById('btn-resume').onclick = () => setPause(false);
   document.getElementById('btn-restart').onclick = () => startRun(0);
   document.getElementById('btn-quit').onclick = () => { state = 'MENU'; document.getElementById('touch-controls').classList.remove('active'); AudioFX.stopBGM(); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
-  document.getElementById('btn-end-menu').onclick = () => { state = 'MENU'; document.getElementById('touch-controls').classList.remove('active'); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
+  document.getElementById('btn-end-menu').onclick = () => { AudioFX.stopBGM(); state = 'MENU'; document.getElementById('touch-controls').classList.remove('active'); hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
   document.getElementById('btn-sub-back').onclick = () => { hideAllMenus(); document.getElementById('menu-main').classList.remove('hidden'); };
 
   function showLevels() {
