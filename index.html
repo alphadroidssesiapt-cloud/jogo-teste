@@ -1160,27 +1160,33 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     for (const plat of lvl.platforms) {
       if (plat.hill) {
         const r=plat.ramp, h=GROUND_Y-plat.y;
-        if(plat.step){
-          const sheet=sheets.slopes;
-          for(let x=plat.x;x<plat.x+plat.w;x+=32){
-            const w=Math.min(32,plat.x+plat.w-x);
-            if(sheet) drawSheetRegion(sheet,[498/1774,76/887,342/1774,327/887],x,plat.y,w,h+2);
-            else {ctx.fillStyle='#96502b';ctx.fillRect(x,plat.y,w,h+2);ctx.fillStyle='#a5a437';ctx.fillRect(x,plat.y,w,4);}
+        const sheet=sheets.terrain || sheets.cerrado;
+        const region=sheets.terrain ? [35/2048,76/682,220/2048,103/682] : CERRADO_SPRITES.tile_ground;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(plat.x,GROUND_Y+2);
+        ctx.lineTo(plat.x+r,plat.y);
+        ctx.lineTo(plat.x+plat.w-r,plat.y);
+        ctx.lineTo(plat.x+plat.w,GROUND_Y+2);
+        ctx.closePath(); ctx.clip();
+        ctx.fillStyle='#78351e'; ctx.fillRect(plat.x,plat.y,plat.w,h+2);
+        const body=[region[0],region[1]+region[3]*.30,region[2],region[3]*.70];
+        const cap=[region[0],region[1],region[2],region[3]*.30];
+        for(let x=plat.x;x<plat.x+plat.w;x+=64){
+          for(let y=plat.y;y<GROUND_Y+2;y+=32){
+            drawSheetRegion(sheet,body,x,y,65,33);
           }
-          continue;
         }
-        ctx.save(); ctx.beginPath(); ctx.moveTo(plat.x,GROUND_Y+2); ctx.lineTo(plat.x+r,plat.y); ctx.lineTo(plat.x+plat.w-r,plat.y); ctx.lineTo(plat.x+plat.w,GROUND_Y+2); ctx.closePath(); ctx.clip();
-        const sheet=sheets.slopes;
-        if(sheet){
-          const region=(x,y,w,h)=>[x/1774,y/887,w/1774,h/887];
-          drawSheetRegion(sheet,region(48,65,350,338),plat.x,plat.y,r,h+2);
-          drawSheetRegion(sheet,region(498,76,342,327),plat.x+r,plat.y,plat.w-2*r,h+2);
-          drawSheetRegion(sheet,region(932,65,350,338),plat.x+plat.w-r,plat.y,r,h+2);
-        } else {
-          ctx.fillStyle='#96502b'; ctx.fillRect(plat.x,plat.y,plat.w,h+2);
+        if(plat.step){
+          for(let x=plat.x;x<plat.x+plat.w;x+=64) drawSheetRegion(sheet,cap,x,plat.y,65,13);
+        }else{
+          for(let x=plat.x;x<plat.x+plat.w;x+=2){
+            const y=hillSurface(plat,x+1);
+            const u=((x-plat.x)%64)/64;
+            drawSheetRegion(sheet,[cap[0]+cap[2]*u,cap[1],cap[2]*2/64,cap[3]],x,y,3,13);
+          }
         }
         ctx.restore();
-        ctx.strokeStyle='#9c982e'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(plat.x,GROUND_Y); ctx.lineTo(plat.x+r,plat.y+1); ctx.lineTo(plat.x+plat.w-r,plat.y+1); ctx.lineTo(plat.x+plat.w,GROUND_Y); ctx.stroke();
         continue;
       }
       const terrainRegions = {short:[28/2048,379/682,159/2048,108/682],medium:[214/2048,379/682,280/2048,108/682],long:[531/2048,379/682,425/2048,108/682]};
