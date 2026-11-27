@@ -518,11 +518,11 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
         this.stopBGM();
         try { ensure(); } catch (_) { return; }
         const tracks = [
-          [230,[72,76,79,76,74,77,81,79,76,74,72,67,69,72,74,0],[48,53,55,48]],
-          [280,[69,72,76,0,71,72,67,64,65,69,72,0,67,65,64,0],[45,43,41,40]],
-          [350,[74,78,81,0,76,74,69,0,71,74,78,76,74,69,66,0],[50,47,43,45]],
-          [190,[64,67,71,67,64,76,74,71,65,69,72,69,67,71,74,0],[40,40,41,43]],
-          [210,[72,72,76,79,84,0,81,79,77,81,84,0,79,83,86,84,0,0,0,0],[48,53,55,48,48]]
+          [180,[72,76,79,81,79,76,74,0,77,81,84,81,79,77,76,0,74,77,79,86,84,81,79,77,76,79,72,74,76,74,72,0],[48,48,53,53,55,55,48,48]],
+          [245,[69,72,76,0,74,72,69,67,65,69,72,0,76,74,72,69,67,71,74,0,72,71,67,64,65,69,71,72,69,67,64,0],[45,45,41,41,43,43,40,45]],
+          [310,[74,81,78,81,76,83,79,83,71,78,74,78,69,76,73,76,74,78,81,86,83,81,78,74,76,79,83,81,78,76,74,0],[50,52,47,45,50,47,43,45]],
+          [150,[64,67,64,71,64,67,76,74,65,69,65,72,65,69,77,76,62,65,69,74,72,69,65,62,64,67,71,76,79,76,71,0],[40,40,41,41,38,38,40,40]],
+          [200,[72,72,76,79,84,0,81,79,77,81,84,0,79,83,86,84,0,0,0,0],[48,53,55,48,48]]
         ];
         const [beat,notes,bass] = tracks[stage] || tracks[0];
         const hz = n => 440 * Math.pow(2,(n-69)/12);
@@ -530,8 +530,9 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
         const tick = () => {
           if (stage === 4 && i >= notes.length) { this.stopBGM(); return; }
           const n = notes[i % notes.length];
-          if (n) tone(hz(n),beat/1000*.85,stage===4?'square':'triangle',0.035);
+          if (n) tone(hz(n),beat/1000*.85,stage===2?'sine':stage===1?'triangle':'square',0.028);
           if (i%4===0) tone(hz(bass[Math.floor(i/4)%bass.length]),beat/1000*2.8,'triangle',0.035);
+          if (stage!==4 && i%2===0) tone(hz(bass[Math.floor(i/4)%bass.length]+12),beat/1000*.35,'triangle',0.018);
           i++;
         };
         tick(); bgmInterval=setInterval(tick,beat);
@@ -575,7 +576,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     { id: 'no_hit', name: 'Corredor da Natureza', desc: 'Complete uma fase sem sofrer colisões.' },
     { id: 'springs', name: 'Protetor das Nascentes', desc: 'Conclua a Fase 3 (Região de Nascentes).' },
     { id: 'guardian', name: 'Guardião do Cerrado', desc: 'Conclua todas as 4 fases da aventura.' },
-    { id: 'hero', name: 'Herói Ambiental', desc: 'Entregue 100% das sementes de uma fase.' }
+    { id: 'hero', name: 'Herói Ambiental', desc: 'Entregue 100% das sementes de uma fase.' },
+    { id: 'no_seed', name: 'No Seed', desc: 'Conclua uma fase sem coletar sementes.' }
   ];
 
   const Storage = {
@@ -674,6 +676,11 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const k = e.key.toLowerCase();
     if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'backspace'].includes(k)) {
       if (state === 'PLAY') e.preventDefault();
+    }
+    if (k === 'enter' && state === 'END' && document.getElementById('menu-end').classList.contains('victory') && currentLevelIdx < LEVELS.length - 1) {
+      e.preventDefault();
+      if (!e.repeat) document.getElementById('btn-next').click();
+      return;
     }
     if (k === 'p' || k === 'escape') {
       if (state === 'PLAY') setPause(true);
@@ -938,8 +945,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if(player.onGround && Math.abs(player.y+player.h-oldSurface)<5 && player.vy>=0 && Math.abs(newSurface-oldSurface)<8) player.y+=newSurface-oldSurface;
     // Paredes dos patamares sólidos: é necessário saltar para subir.
     for(const p of levelData.platforms) if(p.step && player.y+player.h>p.y+3 && player.y<GROUND_Y) {
-      if(player.vx>0 && oldX+player.w<=p.x+2 && player.x+player.w>p.x) {player.x=p.x-player.w;player.vx=0;}
-      else if(player.vx<0 && oldX>=p.x+p.w-2 && player.x<p.x+p.w) {player.x=p.x+p.w;player.vx=0;}
+      if(player.vx>0 && oldX+player.w<=p.x+2 && player.x+player.w>p.x && player.x<p.x+p.w) {player.x=p.x-player.w;player.vx=0;}
+      else if(player.vx<0 && oldX>=p.x+p.w-2 && player.x<p.x+p.w && player.x+player.w>p.x) {player.x=p.x+p.w;player.vx=0;}
     }
     player.x = Math.max(10, Math.min(levelData.cfg.length - player.w, player.x));
 
@@ -953,8 +960,10 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const overPit = levelData.pits.some(p => centerFoot > p.x + 3 && centerFoot < p.x + p.w - 3);
 
     const surface=terrainSurface(levelData.platforms,centerFoot);
-    if (!overPit && player.vy >= 0 && player.y + player.h >= surface && (prevBottom <= surface + 4 || player.y + player.h >= GROUND_Y)) {
-      player.y = surface - player.h;
+    // Escolhe apenas superfícies alcançadas de cima, nunca o topo de uma parede.
+    const landingSurface = prevBottom <= surface + 4 ? surface : GROUND_Y;
+    if (!overPit && player.vy >= 0 && player.y + player.h >= landingSurface && prevBottom <= landingSurface + 4) {
+      player.y = landingSurface - player.h;
       player.vy = 0;
       player.onGround = true;
       player.jumpsLeft = 2;
@@ -993,7 +1002,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
     // Recupera penetração no solo sólido sem descontar vida.
     if (!overPit && player.y + player.h > GROUND_Y) {
-      player.y = surface - player.h;
+      player.y = GROUND_Y - player.h;
       player.vy = 0;
       player.onGround = true;
       player.jumpsLeft = 2;
@@ -1067,7 +1076,19 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       if (obs.type === 'bird' && !obs.passed && player.x > obs.baseX + 125) {
         obs.passed = true; if (!obs.collided) score += 150;
       }
-      if (rectsOverlap(player, obs)) {
+      const touching = rectsOverlap(player, obs);
+      if (obs.type === 'rock') {
+        if (!touching) { obs.contactActive = false; continue; }
+        if (!obs.contactActive && player.invulnTimer <= 0) {
+          obs.contactActive = true;
+          if (Math.random() < 0.5) {
+            damagePlayer(false);
+            if (state !== 'PLAY') return;
+          }
+        }
+        continue;
+      }
+      if (touching) {
         obs.collided = true;
         if (obs.type === 'roller' && player.vy > 0 && prevBottom <= obs.y + 10) {
           obs.defeated = true;
@@ -1376,6 +1397,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     Storage.save(save);
 
     if (levelHits === 0) Storage.unlockAch('no_hit');
+    if (levelData.collectedInLevel === 0) Storage.unlockAch('no_seed');
     if (currentLevelIdx === 2) Storage.unlockAch('springs');
     if (levelData.collectedInLevel >= levelData.seeds.length && levelData.seeds.length > 0) {
       Storage.unlockAch('hero');
@@ -1562,11 +1584,11 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     sub.classList.add('art'); sub.style.backgroundImage=`url("assets/${file}")`;
     sub.style.setProperty('--title-y',titleY+'%'); sub.style.setProperty('--back-y',backY+'%');
   }
-  const row=(y,html)=>`<div class="art-row" style="top:${y}%">${html}</div>`;
+  const row=(y,html,h=7)=>`<div class="art-row" style="top:${y}%;height:${h}%">${html}</div>`;
   document.getElementById('btn-missions').onclick=()=>artMenu('MISSÕES AMBIENTAIS','Painel de missões do Cerrado-2.png',10,85,LEVELS.map((l,i)=>row(33.5+i*11.4,`<span><strong>${l.name}</strong><br><small>${l.mission}</small></span>`)).join(''));
   document.getElementById('btn-achievements').onclick=()=>{
     const save=Storage.get();
-    artMenu('CONQUISTAS','Galeria de conquistas do Cerrado-3.png',4,86,ACHIEVEMENTS_DEF.map((a,i)=>row(26.5+i*8.65,`<span class="art-star ${save.achievements.includes(a.id)?'ok':''}">★</span><strong>${a.name}</strong><small>${a.desc}</small>`)).join(''));
+    artMenu('CONQUISTAS','Galeria de conquistas do Cerrado-3.png',4,86,ACHIEVEMENTS_DEF.map((a,i)=>row(i<5?26.5+i*8.65:69.75+(i-5)*3.4,`<span class="art-star ${save.achievements.includes(a.id)?'ok':''}">★</span><strong>${a.name}</strong><small>${a.desc}</small>`,i>=5?3.4:7)).join(''));
   };
   document.getElementById('btn-records').onclick=()=>{
     const save=Storage.get();
@@ -1584,7 +1606,11 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
     const steps = Math.max(1, Math.ceil(dt / (1/120)));
-    for (let i=0; i<steps; i++) update(dt/steps);
+    for (let i=0; i<steps; i++) {
+      const before = state;
+      update(dt/steps);
+      if (state !== before) break;
+    }
     render();
     requestAnimationFrame(loop);
   }
