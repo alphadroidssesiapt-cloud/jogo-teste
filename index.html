@@ -847,6 +847,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     cameraX = 0;
     particles = [];
     player.x = 48;
+    player.safeX = 48;
     player.h = 44;
     player.jumpsLeft = 2;
     player.standTimer = 0;
@@ -940,7 +941,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       if(player.vx>0 && oldX+player.w<=p.x+2 && player.x+player.w>p.x) {player.x=p.x-player.w;player.vx=0;}
       else if(player.vx<0 && oldX>=p.x+p.w-2 && player.x<p.x+p.w) {player.x=p.x+p.w;player.vx=0;}
     }
-    if (player.x < 10) player.x = 10;
+    player.x = Math.max(10, Math.min(levelData.cfg.length - player.w, player.x));
 
     const prevBottom = player.y + player.h;
     const prevTop = player.y;
@@ -990,8 +991,12 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       }
     }
 
-    if (player.y > canvas.height + 20) {
+    if (player.onGround && !levelData.pits.some(p => player.x < p.x+p.w+12 && player.x+player.w > p.x-12) && Math.abs(player.y+player.h-surface)<3) {
+      player.safeX = player.x;
+    }
+    if (!Number.isFinite(player.y) || !Number.isFinite(player.x) || player.y > canvas.height + 20) {
       damagePlayer(true);
+      return;
     }
 
     for (const s of levelData.seeds) {
@@ -1050,6 +1055,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
           spawnParticles(obs.x + 13, obs.y + 10, '#ffcf40', 10);
         } else {
           damagePlayer(false);
+          if (state !== 'PLAY') return;
         }
       }
     }
@@ -1084,9 +1090,19 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
 
     if (fellInPit) {
-      player.x = Math.max(40, player.x - 90);
-      player.y = GROUND_Y - 70;
-      player.vy = 0;
+      let x = Number.isFinite(player.safeX) ? player.safeX : 48;
+      x = Math.max(10, Math.min(levelData.cfg.length-player.w, x));
+      while (x > 10 && levelData.pits.some(p => x < p.x+p.w+12 && x+player.w > p.x-12)) x = Math.max(10,x-16);
+      player.x = x;
+      player.h = 44;
+      player.crouching = false;
+      player.y = terrainSurface(levelData.platforms,x+player.w/2)-player.h;
+      player.vx = player.vy = 0;
+      player.onGround = true;
+      player.jumpsLeft = 2;
+      player.attackTimer = 0;
+      player.safeX = x;
+      cameraX = Math.max(0, Math.min(levelData.cfg.length-canvas.width,x-130));
     }
     player.invulnTimer = 1.5;
   }
