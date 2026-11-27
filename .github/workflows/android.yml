@@ -32,7 +32,8 @@ jobs:
       - name: Verificar Android SDK
         run: |
           echo "Android SDK: $ANDROID_HOME"
-          sdkmanager --list_installed
+          ls "$ANDROID_HOME/platforms"
+          ls "$ANDROID_HOME/build-tools"
 
       - name: Preparar arquivos offline
         run: |
