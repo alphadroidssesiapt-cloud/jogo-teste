@@ -234,6 +234,9 @@ body[data-play-mode="pc"] #game-shell {width:min(100vw,calc((100dvh - 26px) * 16
 body[data-play-mode="pc"] #info-controls {margin-top:4px;font-size:clamp(9px,1vw,12px);}
 body[data-play-mode="pc"] #touch-controls {display:none!important;}
 @media (orientation:portrait) {body[data-play-mode] #game-shell {width:100vw;} body[data-play-mode="pc"] #info-controls {max-width:100vw;}}
+
+.overlay .pad-selected { outline: 3px solid #ffe66d !important; outline-offset: 2px; box-shadow: 0 0 12px #ffc400 !important; }
+#menu-main button.pad-selected { opacity:1; background:rgba(255,218,0,.35); color:transparent; border-radius:10px; }
 </style>
 </head>
 <body data-play-mode="celular">
@@ -1665,20 +1668,68 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     artMenu('OPÇÕES','Menu de opções no Cerrado-1.png',7,78,`<select id="difficulty-choice" aria-label="Dificuldade"><option value="facil">Dificuldade: Fácil</option><option value="normal">Dificuldade: Normal</option><option value="dificil">Dificuldade: Difícil</option></select><button id="btn-levels">Escolher fase</button>`);
     const d=document.getElementById('difficulty-choice');d.value=difficulty;d.onchange=()=>difficulty=d.value;document.getElementById('btn-levels').onclick=showLevels;
   };
-  document.getElementById('btn-howto').onclick=()=>artMenu('COMO JOGAR','Galeria de conquistas do Cerrado-4.png',7,86,[['Mover','PC: A/D • PS3: analógico/D-pad • Celular: ◁ ▷'],['Pular','PC: W/Espaço • PS3: X ou cima • Celular: A ou △'],['Agachar','PC: S • Celular: segure B ou ▽'],['Andar agachado','Segure B + seta direcional'],['Chutar','PC: J/Z • PS3: ○ • Celular: toque rápido em B'],['Objetivo','Colete sementes e desvie dos animais']].map((a,i)=>row(30.7+i*7.8,`<strong>${a[0]}</strong><small>${a[1]}</small>`)).join(''));
+  document.getElementById('btn-howto').onclick=()=>artMenu('COMO JOGAR','Galeria de conquistas do Cerrado-4.png',7,86,[['Mover','PC: A/D • PS3: analógico/D-pad • Celular: ◁ ▷'],['Pular','PC: W/Espaço • PS3: X ou cima • Celular: A ou △'],['Agachar','PC: S • Celular: ▽'],['Andar agachado','Segure ▽ + seta direcional'],['Chutar','PC: J/Z • PS3: □ • Celular: B'],['Menus','PS3: direções • X entrar • ○ voltar']].map((a,i)=>row(30.7+i*7.8,`<strong>${a[0]}</strong><small>${a[1]}</small>`)).join(''));
 
-  const padState = {left:false,right:false,down:false,jump:false,attack:false,pause:false};
+  const padState = {left:false,right:false,down:false,up:false,jump:false,attack:false,pause:false,confirm:false,back:false};
+  let padSelected = null, padMenu = null, padDirection = '', padRepeatAt = 0;
+  function activePadMenu() {
+    return [...document.querySelectorAll('.overlay')].find(e=>!e.classList.contains('hidden')) || null;
+  }
+  function clearPadSelection() {
+    if(padSelected) padSelected.classList.remove('pad-selected');
+    padSelected=null;
+  }
+  function selectPadItem(el) {
+    clearPadSelection(); padSelected=el;
+    if(el) {el.classList.add('pad-selected'); el.scrollIntoView({block:'nearest',inline:'nearest'});}
+  }
+  function navigatePad(next, now) {
+    const menu=activePadMenu();
+    if(!menu) {clearPadSelection(); padMenu=null; return;}
+    const items=[...menu.querySelectorAll('button, select, .level-card[onclick]')].filter(e=>!e.disabled && e.getClientRects().length);
+    if(menu!==padMenu || !items.includes(padSelected)) {padMenu=menu; selectPadItem(items[0]); padDirection='';}
+    if(next.back && !padState.back) {
+      if(menu.id==='menu-sub') {
+        if(document.getElementById('secret-level-button')) document.getElementById('btn-options').click();
+        else document.getElementById('btn-sub-back').click();
+      } else if(menu.id==='menu-pause') setPause(false);
+      else if(menu.id==='menu-end') document.getElementById('btn-end-menu').click();
+      return;
+    }
+    const dir=next.up?'up':next.down?'down':next.left?'left':next.right?'right':'';
+    if(dir && (dir!==padDirection || now>=padRepeatAt)) {
+      padRepeatAt=now+(dir===padDirection?130:320);
+      if(padSelected?.tagName==='SELECT' && (dir==='left'||dir==='right')) {
+        const el=padSelected; el.selectedIndex=(el.selectedIndex+(dir==='right'?1:-1)+el.options.length)%el.options.length;
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+      } else if(padSelected && items.length>1) {
+        const r=padSelected.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+        const horizontal=dir==='left'||dir==='right', sign=dir==='left'||dir==='up'?-1:1;
+        const candidates=items.filter(e=>e!==padSelected).map(e=>{const t=e.getBoundingClientRect(), dx=t.left+t.width/2-cx,dy=t.top+t.height/2-cy;return {e,primary:sign*(horizontal?dx:dy),cross:Math.abs(horizontal?dy:dx)};}).filter(v=>v.primary>2).sort((a,b)=>(a.primary+2*a.cross)-(b.primary+2*b.cross));
+        if(candidates.length) selectPadItem(candidates[0].e);
+        else {const i=items.indexOf(padSelected); selectPadItem(items[(i+sign+items.length)%items.length]);}
+      }
+    }
+    padDirection=dir;
+    if(next.confirm && !padState.confirm && padSelected) {
+      if(padSelected.tagName==='SELECT') {const el=padSelected;el.selectedIndex=(el.selectedIndex+1)%el.options.length;el.dispatchEvent(new Event('change',{bubbles:true}));}
+      else padSelected.click();
+    }
+  }
   function pollGamepad() {
     const pad = Array.from(navigator.getGamepads?.() || []).find(p=>p && p.connected);
     const pressed = i => !!pad?.buttons[i]?.pressed;
     const x = pad?.axes[0] || 0, y = pad?.axes[1] || 0;
-    const next = {left:x < -0.35 || pressed(14),right:x > 0.35 || pressed(15),down:y > 0.35 || pressed(13),jump:pressed(0)||pressed(12)||y < -0.65,attack:pressed(1),pause:pressed(9)};
-    if(next.pause && !padState.pause) {if(state==='PLAY') setPause(true); else if(state==='PAUSE') setPause(false);}
-    if(state==='PLAY') {
+    const next = {left:x < -0.35 || pressed(14),right:x > 0.35 || pressed(15),down:y > 0.35 || pressed(13),up:y < -0.35 || pressed(12),jump:pressed(0)||pressed(12)||y < -0.65,attack:pressed(2),pause:pressed(9),confirm:pressed(0),back:pressed(1)};
+    if(!pad) {clearPadSelection();padMenu=null;padDirection='';Object.assign(padState,next);return;}
+    if(next.pause && !padState.pause && (state==='PLAY'||state==='PAUSE')) setPause(state==='PLAY');
+    else if(activePadMenu()) navigatePad(next,performance.now());
+    else if(state==='PLAY') {
+      clearPadSelection();padMenu=null;
       if(next.jump && !padState.jump) tryJump();
       if(!next.jump && padState.jump && player.vy < -110) player.vy *= 0.55;
       if(next.attack && !padState.attack) tryAttack();
-    } else if(state==='END' && next.jump && !padState.jump) document.getElementById('btn-next').click();
+    }
     Object.assign(padState,next);
   }
 
