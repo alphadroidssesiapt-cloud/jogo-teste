@@ -765,6 +765,15 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       if (pattern === 2) addPlatform(x + 95, 116, 112, 'long');
     }
     for (const pit of pits) addPlatform(pit.x - 4, 180, pit.w + 8, 'medium');
+    // Metade das plataformas vira relevo sólido, sem fechar os buracos.
+    const candidates = [...platforms].sort((a,b)=>b.y-a.y);
+    let hillCount = 0;
+    for (const p of candidates) {
+      if (hillCount >= Math.floor(platforms.length/2)) break;
+      if (p.y < 140 || pits.some(q=>p.x<q.x+q.w && p.x+p.w>q.x)) continue;
+      if (platforms.some(q=>q!==p && q.x<p.x+p.w && q.x+q.w>p.x && (q.hill || q.y>p.y))) continue;
+      p.hill=true; hillCount++;
+    }
     platforms.sort((a,b) => a.y-b.y);
 
     for (let x = 180; x < cfg.length - 300; x += 190) {
@@ -803,6 +812,14 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
 
 
+    // Sementes e obstáculos terrestres acompanham a altura do terreno.
+    for (const s of seeds) for (const p of platforms) {
+      if (p.hill && s.x+8>p.x && s.x+8<p.x+p.w && s.y+18>p.y) s.y=p.y-20;
+    }
+    for (const o of obstacles) if (o.type !== 'bird') {
+      const hill=platforms.find(p=>p.hill && o.x+o.w/2>p.x && o.x+o.w/2<p.x+p.w);
+      if(hill) o.y=hill.y-o.h;
+    }
     return {
       cfg, pits, platforms, blocks, seeds, obstacles, decors,
       npcX: cfg.length - 130,
@@ -913,7 +930,14 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if (player.pose !== pose) { player.pose = pose; player.animTimer = 0; }
     else player.animTimer += dt;
 
+    const oldX = player.x;
     player.x += player.vx * dt;
+    // Laterais dos morros são sólidas; o jogador precisa saltar.
+    for (const p of levelData.platforms) {
+      if (!p.hill || player.y+player.h<=p.y+3 || player.y>=GROUND_Y) continue;
+      if (oldX+player.w<=p.x+1 && player.x+player.w>p.x) {player.x=p.x-player.w; player.vx=0;}
+      else if(oldX>=p.x+p.w-1 && player.x<p.x+p.w) {player.x=p.x+p.w; player.vx=0;}
+    }
     if (player.x < 10) player.x = 10;
 
     const prevBottom = player.y + player.h;
@@ -998,6 +1022,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
         if (obs.x > obs.baseX + 95) { obs.x = obs.baseX + 95; obs.vx = -Math.abs(obs.vx); }
         obs.anim = (obs.anim || 0) + dt;
         if (obs.type === 'bird') { obs.y = obs.baseY + Math.sin(obs.anim * 3) * 4; }
+        else { const hill=levelData.platforms.find(p=>p.hill && obs.x+obs.w/2>p.x && obs.x+obs.w/2<p.x+p.w); obs.y=(hill?hill.y:GROUND_Y)-obs.h; }
       }
 
       if (kickBox && obs.type === 'roller' && rectsOverlap(kickBox, obs)) {
@@ -1129,6 +1154,14 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
 
     for (const plat of lvl.platforms) {
+      if (plat.hill) {
+        const region = sheets.terrain ? [35/2048,76/682,220/2048,103/682] : CERRADO_SPRITES.tile_ground;
+        ctx.save(); ctx.beginPath(); ctx.rect(plat.x,plat.y,plat.w,GROUND_Y-plat.y+2); ctx.clip();
+        for(let x=plat.x;x<plat.x+plat.w;x+=48) drawSheetRegion(sheets.terrain || sheets.cerrado,region,x,plat.y,48,GROUND_Y-plat.y+2);
+        ctx.restore();
+        ctx.fillStyle='#38231666'; ctx.fillRect(plat.x,plat.y+6,2,GROUND_Y-plat.y-6); ctx.fillRect(plat.x+plat.w-2,plat.y+6,2,GROUND_Y-plat.y-6);
+        continue;
+      }
       const terrainRegions = {short:[28/2048,379/682,159/2048,108/682],medium:[214/2048,379/682,280/2048,108/682],long:[531/2048,379/682,425/2048,108/682]};
       const region = terrainRegions[plat.style || 'medium'];
       drawSheetRegion(sheets.terrain || sheets.cerrado, sheets.terrain ? region : CERRADO_SPRITES.tile_plat, plat.x, plat.y, plat.w, plat.h);
