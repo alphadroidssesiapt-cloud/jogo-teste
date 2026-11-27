@@ -377,6 +377,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
           const rows = [[0,148],[172,318],[342,489],[512,657]];
           const [top,bottom] = rows[n-1];
           sheets[key] = createFallbackCanvas(1698,bottom-top,(g,w,h)=>{
+            g.imageSmoothingEnabled = false;
             g.drawImage(img,350*img.width/2048,top*img.height/682,w*img.width/2048,h*img.height/682,0,0,w,h);
           });
         } else sheets[key] = processChromaKey(img, key);
@@ -741,12 +742,30 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
 
     for (let x = 260; x < cfg.length - 360; x += 270) {
-      const py = (x % 540 === 0) ? 140 : 162;
+      const py = Math.floor((x - 260) / 270) % 2 === 0 ? 162 : 150;
       platforms.push({ x, y: py, w: 70, h: 16 });
       blocks.push({ x: x + 26, y: py - 64, w: 18, h: 18, hit: false, bounce: 0 });
       seeds.push({ x: x + 10, y: py - 20, collected: false, bob: x * 0.02 });
       seeds.push({ x: x + 44, y: py - 20, collected: false, bob: x * 0.02 + 1 });
     }
+
+    // Rotas elevadas: degraus, ilhas e pontes sobre buracos.
+    function addPlatform(x, y, w, style = 'medium') {
+      if (x < 140 || x + w > cfg.length - 260) return;
+      if (platforms.some(p => x < p.x + p.w + 8 && x + w + 8 > p.x && Math.abs(y - p.y) < 26)) return;
+      if (blocks.some(b => x < b.x + b.w + 12 && x + w + 12 > b.x && Math.abs(y - b.y) < 40)) return;
+      platforms.push({x, y, w, h: style === 'long' ? 18 : 14, style});
+      for (let sx = x + 9; sx < x + w - 12; sx += 28) seeds.push({x:sx,y:y-20,collected:false,bob:sx*.03});
+    }
+    for (let x = 260; x < cfg.length - 430; x += 270) {
+      const pattern = (Math.floor((x-260)/270) + idx) % 3;
+      addPlatform(x + 94, 190, 42, 'short');
+      addPlatform(x + 151, pattern === 1 ? 145 : 154, 74, 'medium');
+      if (pattern === 0) addPlatform(x + 104, 103, 42, 'short');
+      if (pattern === 2) addPlatform(x + 95, 116, 112, 'long');
+    }
+    for (const pit of pits) addPlatform(pit.x - 4, 180, pit.w + 8, 'medium');
+    platforms.sort((a,b) => a.y-b.y);
 
     for (let x = 180; x < cfg.length - 300; x += 190) {
       const inPit = pits.some(p => x > p.x - 20 && x < p.x + p.w + 20);
@@ -1073,7 +1092,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const parallaxOffset = Math.floor((cameraX * 0.25) % bgW);
     if (!bgCache[lvl.cfg.bgKey] && landscape) {
       bgCache[lvl.cfg.bgKey] = createFallbackCanvas(bgW, GROUND_Y, (g,w,h) => {
-        g.filter = 'blur(0.22px)';
+        g.filter = 'none';
+        g.imageSmoothingEnabled = false;
         if (landscape) g.drawImage(landscape,-4,-4,w+8,h+8);
         else {
           const [x,y,r,t] = bgNorm;
@@ -1109,7 +1129,9 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
 
     for (const plat of lvl.platforms) {
-      drawSheetRegion(sheets.terrain || sheets.cerrado, sheets.terrain ? [214/2048,380/682,280/2048,104/682] : CERRADO_SPRITES.tile_plat, plat.x, plat.y, plat.w, plat.h);
+      const terrainRegions = {short:[28/2048,379/682,159/2048,108/682],medium:[214/2048,379/682,280/2048,108/682],long:[531/2048,379/682,425/2048,108/682]};
+      const region = terrainRegions[plat.style || 'medium'];
+      drawSheetRegion(sheets.terrain || sheets.cerrado, sheets.terrain ? region : CERRADO_SPRITES.tile_plat, plat.x, plat.y, plat.w, plat.h);
     }
 
     for (const blk of lvl.blocks) {
