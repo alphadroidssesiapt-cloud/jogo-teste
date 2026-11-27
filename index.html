@@ -206,6 +206,19 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 }
 
 @media (orientation:landscape) { #touch-controls.active { --key:clamp(36px,min(11.2dvh,12vw),95px); } }
+
+#menu-sub.art {padding:0;background-size:100% 100%;background-repeat:no-repeat;}
+#menu-sub.art #sub-title {position:absolute;left:29%;width:42%;top:var(--title-y);height:12%;display:grid;place-items:center;font-size:3cqw;color:#fff0bc;text-shadow:2px 2px #542608;margin:0;text-align:center;}
+#menu-sub.art #sub-content {position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;background:none;border:0;box-shadow:none;padding:0;margin:0;overflow:hidden;color:#48260e;}
+#menu-sub.art #btn-sub-back {position:absolute;left:45%;width:10%;top:var(--back-y);height:10%;background:transparent;border:0;box-shadow:none;color:transparent;padding:0;}
+#menu-sub.art #btn-sub-back:hover {background:#ffdd4433;transform:none;}
+.art-row {position:absolute;left:24%;width:56%;height:7%;display:flex;align-items:center;justify-content:space-between;gap:1cqw;font-size:1.65cqw;line-height:1.15;}
+.art-row small {font-size:1.35cqw;}
+.art-star {position:absolute;left:-8%;width:5%;text-align:center;font-size:3.1cqw;line-height:1;color:#80501f;background:#efbd70;text-shadow:1px 1px #43230c;}
+.art-star.ok {color:#ffda27;}
+#menu-sub.art select {position:absolute;left:40%;top:39%;width:27%;height:7.5%;font: bold 2cqw monospace;color:#48260e;background:transparent;border:0;padding:0 2%;touch-action:auto;}
+#menu-sub.art #btn-levels {position:absolute;left:32%;top:51%;width:36%;height:11%;background:transparent;border:0;box-shadow:none;color:#fff1c6;font-size:2.3cqw;padding-left:7%;}
+#menu-sub.art #btn-levels:hover {color:#ffdf43;transform:none;}
 </style>
 </head>
 <body>
@@ -601,7 +614,24 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
   bindTouchButton('btn-right', 'right');
   bindTouchButton('btn-down', 'down');
   bindTouchButton('btn-jump', 'jump');
-  bindTouchButton('btn-attack', 'attack');
+  const bButton = document.getElementById('btn-attack');
+  let bPointer = null, bStart = 0, bMoved = false;
+  bButton.setAttribute('aria-label','Toque para chutar; segure para agachar');
+  bButton.addEventListener('pointerdown', e => {
+    e.preventDefault(); if (state !== 'PLAY' || bPointer !== null) return;
+    bPointer=e.pointerId; bStart=performance.now(); bMoved=false; touchState.b=true;
+    bButton.setPointerCapture(e.pointerId);
+  });
+  function releaseB(e, attack) {
+    if(e.pointerId !== bPointer) return;
+    const quick=performance.now()-bStart<220 && !bMoved;
+    bPointer=null; touchState.b=false;
+    if(attack && quick && state==='PLAY') tryAttack();
+  }
+  bButton.addEventListener('pointerup',e=>releaseB(e,true));
+  bButton.addEventListener('pointercancel',e=>releaseB(e,false));
+  bButton.addEventListener('lostpointercapture',e=>releaseB(e,false));
+  window.addEventListener('blur',()=>{bPointer=null; Object.keys(touchState).forEach(k=>touchState[k]=false);});
 
   document.getElementById('btn-pause-mob').onclick = () => {
     if (state === 'PLAY') setPause(true);
@@ -798,7 +828,8 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 
     const left = keys['a'] || keys['arrowleft'] || touchState.left;
     const right = keys['d'] || keys['arrowright'] || touchState.right;
-    const down = keys['s'] || keys['arrowdown'] || touchState.down;
+    if(touchState.b && (left || right)) bMoved=true;
+    const down = keys['s'] || keys['arrowdown'] || touchState.down || touchState.b;
 
     if (down && player.onGround) {
       if (!player.crouching) {
@@ -1257,6 +1288,7 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 
   function openSubMenu(title, html) {
     hideAllMenus();
+    const sub=document.getElementById('menu-sub'); sub.classList.remove('art'); sub.style.backgroundImage='';
     document.getElementById('sub-title').textContent = title;
     document.getElementById('sub-content').innerHTML = html;
     document.getElementById('menu-sub').classList.remove('hidden');
@@ -1345,6 +1377,29 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
       return `<p style="margin-bottom:6px;color:${ok ? '#ffcf40' : '#7a998b'};">${ok ? '★' : '☆'} <strong>${a.name}:</strong> ${a.desc}</p>`;
     }).join(''));
   };
+
+  function artMenu(title, file, titleY, backY, html) {
+    openSubMenu(title,html);
+    const sub=document.getElementById('menu-sub');
+    sub.classList.add('art'); sub.style.backgroundImage=`url("assets/${file}")`;
+    sub.style.setProperty('--title-y',titleY+'%'); sub.style.setProperty('--back-y',backY+'%');
+  }
+  const row=(y,html)=>`<div class="art-row" style="top:${y}%">${html}</div>`;
+  document.getElementById('btn-missions').onclick=()=>artMenu('MISSÕES AMBIENTAIS','Painel de missões do Cerrado-2.png',10,85,LEVELS.map((l,i)=>row(33.5+i*11.4,`<span><strong>${l.name}</strong><br><small>${l.mission}</small></span>`)).join(''));
+  document.getElementById('btn-achievements').onclick=()=>{
+    const save=Storage.get();
+    artMenu('CONQUISTAS','Galeria de conquistas do Cerrado-3.png',4,86,ACHIEVEMENTS_DEF.map((a,i)=>row(26.5+i*8.65,`<span class="art-star ${save.achievements.includes(a.id)?'ok':''}">★</span><strong>${a.name}</strong><small>${a.desc}</small>`)).join(''));
+  };
+  document.getElementById('btn-records').onclick=()=>{
+    const save=Storage.get();
+    const entries=[['Maior pontuação',save.bestScore],['Máximo de sementes',save.maxSeeds],['Melhor tempo',save.bestTimeMs?formatTime(save.bestTimeMs):'--:--:---'],['Total de sementes',save.totalSeeds],['Fases desbloqueadas',save.unlockedLevel],['Tentativas registradas',save.history.length]];
+    artMenu('RECORDES','Galeria de conquistas do Cerrado-4.png',7,86,entries.map((a,i)=>row(30.7+i*7.8,`<strong>${a[0]}</strong><strong>${a[1]}</strong>`)).join(''));
+  };
+  document.getElementById('btn-options').onclick=()=>{
+    artMenu('OPÇÕES','Menu de opções no Cerrado-1.png',7,78,`<select id="difficulty-choice" aria-label="Dificuldade"><option value="facil">Dificuldade: Fácil</option><option value="normal">Dificuldade: Normal</option><option value="dificil">Dificuldade: Difícil</option></select><button id="btn-levels">Escolher fase</button>`);
+    const d=document.getElementById('difficulty-choice');d.value=difficulty;d.onchange=()=>difficulty=d.value;document.getElementById('btn-levels').onclick=showLevels;
+  };
+  document.getElementById('btn-howto').onclick=()=>artMenu('COMO JOGAR','Galeria de conquistas do Cerrado-4.png',7,86,[['Mover','PC: A/D • Celular: ◁ ▷'],['Pular','PC: W/Espaço • Celular: A ou △'],['Agachar','PC: S • Celular: segure B ou ▽'],['Andar agachado','Segure B + seta direcional'],['Chutar','PC: J/Z • Celular: toque rápido em B'],['Objetivo','Colete sementes e desvie dos animais']].map((a,i)=>row(30.7+i*7.8,`<strong>${a[0]}</strong><small>${a[1]}</small>`)).join(''));
 
   let lastTs = performance.now();
   function loop(ts) {
