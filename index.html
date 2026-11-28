@@ -938,7 +938,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       if(hill) o.y=hillSurface(hill,o.x+o.w/2)-o.h;
     }
     if (idx === 3) { const last = obstacles.map(o=>o.type).lastIndexOf('bird'); if(last>=0) obstacles.splice(last,1); }
-    if (idx === SECRET_IDX) { for (const a of [pits, platforms, blocks, seeds, obstacles]) a.length=0; }
+    if (idx === SECRET_IDX) { seeds.length=0; for(let i=obstacles.length-1;i>=0;i--) if(obstacles[i].type==='bird') obstacles.splice(i,1); }
     if (idx === TEAM_IDX) { for (const a of [pits, platforms, blocks, seeds, obstacles, decors]) a.length = 0; }
     const arenaLeft=cfg.length-440;
     if(cfg.id===5){for(const a of [pits,platforms,blocks,obstacles]) for(let i=a.length-1;i>=0;i--)if(a[i].x+(a[i].w||0)>arenaLeft-100)a.splice(i,1);for(const seed of seeds)if(seed.x>=arenaLeft-100)seed.y=GROUND_Y-24;}
@@ -1501,21 +1501,27 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if (state === 'DELIVER' && creatorEnding) {
       const bx = 16, by = 32, bw = VIEW_W - 32;
       const secretEnding = lvl.cfg.id === 5;
-      const boxH = secretEnding ? 98 : 72;
+      const boxH = secretEnding ? 85 : 72;
       ctx.fillStyle = 'rgba(10,20,16,.96)'; ctx.fillRect(bx,by,bw,boxH);
       ctx.strokeStyle = '#7ee0b8'; ctx.lineWidth = 1.5; ctx.strokeRect(bx,by,bw,boxH);
       ctx.textAlign = 'left'; ctx.fillStyle = '#ffcf40'; ctx.font = 'bold 11px monospace';
-      ctx.fillText(secretEnding ? 'Cassidy e Theodoro' : 'Equipe AlphaDroids',bx+10,by+15);
+      ctx.fillText(secretEnding ? 'Theodoro' : 'Equipe AlphaDroids',bx+10,by+15);
       ctx.fillStyle = '#fff3b0'; ctx.font = '10px monospace';
-      const shift = secretEnding ? 26 : 0;
       if (secretEnding) {
-        ctx.fillText('Isso é o que acontece quando o Cerrado',bx+10,by+30);
-        ctx.fillText('perde a biodiversidade...',bx+10,by+43);
+        const message = 'Esse é o Cerrado sem a biodiversidade e tomado por espécies invasoras. Por favor, ajude a preservar e a manter a biodiversidade viva.';
+        const lines=[]; let line='';
+        for(const word of message.split(' ')) {
+          const next=line?line+' '+word:word;
+          if(line && ctx.measureText(next).width>bw-20){lines.push(line);line=word;}else line=next;
+        }
+        if(line)lines.push(line);
+        lines.forEach((l,i)=>ctx.fillText(l,bx+10,by+30+i*13));
+      } else {
+        ctx.fillText('Obrigado por jogar nosso jogo!',bx+10,by+30);
+        ctx.fillText('Nos esforçamos muito para fazer.',bx+10,by+43);
+        ctx.fillText('Espero que tenha gostado da experiência de jogar.',bx+10,by+56);
       }
-      ctx.fillText('Obrigado por jogar nosso jogo!',bx+10,by+30+shift);
-      ctx.fillText('Nos esforçamos muito para fazer.',bx+10,by+43+shift);
-      ctx.fillText('Espero que tenha gostado da experiência de jogar.',bx+10,by+56+shift);
-      ctx.fillStyle = '#7ee0b8'; ctx.fillRect(bx+10,by+63+shift,(bw-20)*Math.max(0,1-lvl.deliverTimer/10),3);
+      ctx.fillStyle = '#7ee0b8'; ctx.fillRect(bx+10,by+boxH-9,(bw-20)*Math.max(0,1-lvl.deliverTimer/10),3);
     }
 
     if (state === 'PLAY' || state === 'DELIVER') {
