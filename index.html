@@ -220,6 +220,10 @@ body:has(#touch-controls.active) #game-shell {width:min(100vw,calc(100dvh * 16 /
 #menu-sub.art #btn-levels {position:absolute;left:32%;top:51%;width:36%;height:11%;background:transparent;border:0;box-shadow:none;color:#fff1c6;font-size:2.3cqw;padding-left:7%;}
 #menu-sub.art #btn-levels:hover {color:#ffdf43;transform:none;}
 
+#menu-end.credits {background-image:url("assets/Obrigado por jogar_ Aventura pelo Cerrado.png");background-size:contain;background-position:center;background-color:#101a16;}
+#menu-end.credits #end-title {top:75%;left:0;width:100%;text-align:center;color:#fff;font-size:3cqw;text-shadow:2px 2px #000;}
+#menu-end.credits #end-content {display:none;}
+#menu-end.credits .menu-grid button {top:88%;height:8%;background:#243c35;border:1px solid #7ee0b8;}
 #menu-end.champion {background-image:url("assets/Lobo Guardião ao Pôr do Sol.png");}
 #menu-end.champion #end-title {top:73%;left:28%;width:44%;font-size:2.8cqw;color:#592800;text-shadow:0 1px #ffe88c;}
 #menu-end.champion #end-content {top:39%;left:7%;width:23%;height:23%;background:rgba(35,19,45,.88);border:2px solid #e6aa38;border-radius:8px;font-size:1.7cqw;color:#ffe69a;}
@@ -945,7 +949,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     return {
       boss: idx===SECRET_IDX ? {x:cfg.length-180,y:GROUND_Y-88,w:128,h:88,hits:0,left:arenaLeft,right:cfg.length-12,hp:10,mode:'open',time:0,dir:-1,active:false,hitUsed:false}:null,
       cfg, pits, platforms, blocks, seeds, obstacles, decors,
-      npcX: cfg.length - (idx === TEAM_IDX ? 365 : 130),
+      npcX: cfg.length - (idx === TEAM_IDX ? 370 : 130),
       collectedInLevel: 0,
       deliverTimer: 0
     };
@@ -1422,8 +1426,9 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
     const creatorEnding = lvl.cfg.id >= 5;
     if (lvl.boss && !lvl.boss.finished) { drawBoss(lvl.boss); } else if (lvl.cfg.id === 6) {
-      ctx.fillStyle='#66503a';ctx.fillRect(lvl.npcX+8,GROUND_Y-48,332,48);ctx.fillStyle='#b8a06a';ctx.fillRect(lvl.npcX+8,GROUND_Y-48,332,4);
-      for(let i=0;i<17;i++){const img=sheets['team'+i];if(!img)continue;const back=i<9, col=back?i:i-9;const h=back?57:64,w=h*img.width/img.height;const x=lvl.npcX+12+col*36+(back?0:18);ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,x+(36-w)/2,GROUND_Y-h-(back?48:0),w,h);ctx.restore();}
+      const members = Array.from({length:17},(_,i)=>i).filter(i=>i!==14);
+      const spacing=22, h=56;
+      members.forEach((i,col)=>{const img=sheets['team'+i];if(!img)return;const w=Math.min(21,h*img.width/img.height), height=w*img.height/img.width;const x=lvl.npcX+8+col*spacing;ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,x+(spacing-w)/2,GROUND_Y-height,w,height);ctx.restore();});
     } else if (creatorEnding) {
       for (const [key, offset, name] of [['cassidy', 0, 'Cassidy'], ['theodoro', 55, 'Theodoro']]) {
         const img = sheets[key];
@@ -1560,7 +1565,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     levelData.completed = true;
     state = 'END';
     AudioFX.stopBGM();
-    document.getElementById('menu-end').classList.remove('champion');
+    document.getElementById('menu-end').classList.remove('champion','credits');
     document.getElementById('touch-controls').classList.remove('active');
     const levelBonus = 500;
     const noHitBonus = levelHits === 0 ? 400 : 0;
@@ -1612,13 +1617,24 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     btnNext.textContent = isLast ? 'JOGAR NOVAMENTE' : 'PRÓXIMA FASE';
     btnNext.onclick = () => isSecret ? showLevels() : isLast ? startRun(0) : startLevel(currentLevelIdx + 1);
     if (isSecret) btnNext.textContent = "ESCOLHER FASE";
+    if (isLast) {
+      const nextAction=btnNext.onclick;
+      btnNext.onclick=()=>{
+        const menu=document.getElementById('menu-end');
+        menu.classList.remove('champion');menu.classList.add('credits');
+        document.getElementById('end-title').textContent='dev thzin';
+        btnNext.textContent='CONTINUAR';
+        btnNext.onclick=()=>{menu.classList.remove('credits');nextAction();};
+      };
+      btnNext.onclick();
+    }
     document.getElementById('menu-end').classList.remove('hidden');
   }
 
   function endGame(won) {
     state = 'END';
     AudioFX.stopBGM();
-    document.getElementById('menu-end').classList.remove('champion');
+    document.getElementById('menu-end').classList.remove('champion','credits');
     document.getElementById('touch-controls').classList.remove('active');
     AudioFX.stopBGM();
     saveRunRecord(false);
