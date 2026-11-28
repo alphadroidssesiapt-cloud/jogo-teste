@@ -605,6 +605,9 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
   ];
 
   const SECRET_IDX = LEVELS.length;
+  const TEAM_IDX = SECRET_IDX + 1;
+  const TEAM_LEVEL = {...LEVELS[3], id: 6, name: 'FINAL: EQUIPE ALPHADROIDS', length: 800, flora: [], fauna: []};
+  const SEED_GOAL = 220;
   const SECRET_LEVEL = { ...LEVELS[3], id: 5, name: 'FASE SECRETA: CERRADO SEM VIDA', length: 4800, mission: 'Atravesse o Cerrado Sem Vida sem sementes.', bgKey: 'bg_dead', flora: [], fauna: [], curiosity: 'Sem preservação, o Cerrado perde sua biodiversidade.' };
   const ACHIEVEMENTS_DEF = [
     { id: 'first_seed', name: 'Primeira Semente', desc: 'Colete sua primeira semente nativa.' },
@@ -798,7 +801,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     return y;
   }
   function buildLevel(idx) {
-    const cfg = idx === SECRET_IDX ? SECRET_LEVEL : LEVELS[idx];
+    const cfg = idx === TEAM_IDX ? TEAM_LEVEL : idx === SECRET_IDX ? SECRET_LEVEL : LEVELS[idx];
     const mult = DIFF_MULT[difficulty];
     const platforms = [];
     const blocks = [];
@@ -882,9 +885,10 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
     if (idx === 3) { const last = obstacles.map(o=>o.type).lastIndexOf('bird'); if(last>=0) obstacles.splice(last,1); }
     if (idx === SECRET_IDX) { seeds.length = 0; for (let i=obstacles.length-1;i>=0;i--) if(obstacles[i].type==='bird') obstacles.splice(i,1); }
+    if (idx === TEAM_IDX) { for (const a of [pits, platforms, blocks, seeds, obstacles, decors]) a.length = 0; }
     return {
       cfg, pits, platforms, blocks, seeds, obstacles, decors,
-      npcX: cfg.length - (idx === 3 ? 365 : 130),
+      npcX: cfg.length - (idx === TEAM_IDX ? 365 : 130),
       collectedInLevel: 0,
       deliverTimer: 0
     };
@@ -904,7 +908,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
   function startLevel(idx) {
     currentLevelIdx = idx;
-    AudioFX.startBGM(idx === SECRET_IDX ? 5 : idx);
+    AudioFX.startBGM(idx === TEAM_IDX ? 4 : idx === SECRET_IDX ? 5 : idx);
     levelData = buildLevel(idx);
     levelHits = 0;
     cameraX = 0;
@@ -1153,7 +1157,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
     if (player.x + player.w >= levelData.npcX - 10) {
       player.vx = 0;
-      if (currentLevelIdx === 3 && runInitialLevel === 0 && totalRunDelivered + levelData.collectedInLevel < 200) { finishLevelDialog(); return; }
+      if (currentLevelIdx === 3) { finishLevelDialog(); return; }
       if (levelData.cfg.id >= 4) cameraX = Math.max(0, levelData.cfg.length - VIEW_W);
       player.crouching = false;
       player.h = 44;
@@ -1219,7 +1223,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
   const bgCache = {};
   function render() {
     const lvl = levelData || buildLevel(0);
-    const renderScale = lvl.cfg.id === 4 ? 4 : 1;
+    const renderScale = lvl.cfg.id === 6 ? 4 : 1;
     if (canvas.width !== VIEW_W * renderScale || canvas.height !== VIEW_H * renderScale) {
       canvas.width = VIEW_W * renderScale;
       canvas.height = VIEW_H * renderScale;
@@ -1230,7 +1234,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const bgNorm = CERRADO_SPRITES[lvl.cfg.bgKey];
 
     const dead = lvl.cfg.id === 5;
-    const landscape = sheets['landscape' + (dead ? 1 : lvl.cfg.id)];
+    const landscape = sheets['landscape' + (dead ? 1 : lvl.cfg.id === 6 ? 4 : lvl.cfg.id)];
     const bgW = landscape ? Math.max(VIEW_W, Math.round(GROUND_Y * landscape.width / landscape.height * 0.85)) : VIEW_W;
     const parallaxOffset = Math.floor((cameraX * 0.25) % bgW);
     if (!bgCache[lvl.cfg.bgKey] && landscape) {
@@ -1356,8 +1360,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
     ctx.filter = "none";
     const npcPose = state === 'DELIVER' ? NPC_FRAMES.point : NPC_FRAMES.notes;
-    const creatorEnding = lvl.cfg.id >= 4;
-    if (lvl.cfg.id === 4) {
+    const creatorEnding = lvl.cfg.id >= 5;
+    if (lvl.cfg.id === 6) {
       ctx.fillStyle='#66503a';ctx.fillRect(lvl.npcX+8,GROUND_Y-48,332,48);ctx.fillStyle='#b8a06a';ctx.fillRect(lvl.npcX+8,GROUND_Y-48,332,4);
       for(let i=0;i<17;i++){const img=sheets['team'+i];if(!img)continue;const back=i<9, col=back?i:i-9;const h=back?57:64,w=h*img.width/img.height;const x=lvl.npcX+12+col*36+(back?0:18);ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,x+(36-w)/2,GROUND_Y-h-(back?48:0),w,h);ctx.restore();}
     } else if (creatorEnding) {
@@ -1481,7 +1485,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
 
       ctx.fillStyle = '#ffffff';
       ctx.fillText(formatTime(elapsedMs), VIEW_W - 126, 18);
-      ctx.fillStyle='rgba(10,22,16,.65)';ctx.fillRect(6,25,112,13);ctx.fillStyle='#fff3b0';ctx.font='8px monospace';ctx.fillText('TOTAL: '+(totalRunDelivered+(state==='DELIVER'||state==='PLAY'?levelData.collectedInLevel:0))+' / 200',10,34);
+      ctx.fillStyle='rgba(10,22,16,.65)';ctx.fillRect(6,25,112,13);ctx.fillStyle='#fff3b0';ctx.font='8px monospace';ctx.fillText('TOTAL: '+(totalRunDelivered+(state==='DELIVER'||state==='PLAY'?levelData.collectedInLevel:0))+' / '+SEED_GOAL,10,34);
     }
   }
 
@@ -1504,16 +1508,21 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     Storage.save(save);
 
     if (levelHits === 0) Storage.unlockAch('no_hit');
-    if (currentLevelIdx !== SECRET_IDX && levelData.collectedInLevel === 0) Storage.unlockAch('no_seed');
+    if (currentLevelIdx < LEVELS.length && levelData.collectedInLevel === 0) Storage.unlockAch('no_seed');
     if (currentLevelIdx === 2) Storage.unlockAch('springs');
     if (levelData.collectedInLevel >= levelData.seeds.length && levelData.seeds.length > 0) {
       Storage.unlockAch('hero');
     }
 
     const isSecret = currentLevelIdx === SECRET_IDX;
-    const routeSecret = currentLevelIdx === 3 && runInitialLevel === 0 && totalRunDelivered < 200;
-    if(routeSecret){save.secretUnlocked=true;Storage.save(save);}
-    const isLast = (currentLevelIdx === LEVELS.length - 1 && !routeSecret) || isSecret;
+    if (currentLevelIdx === 3) {
+      const routeSecret = totalRunDelivered < SEED_GOAL;
+      if (routeSecret) { const data = Storage.get(); data.secretUnlocked = true; Storage.save(data); }
+      lives = 3;
+      startLevel(routeSecret ? SECRET_IDX : TEAM_IDX);
+      return;
+    }
+    const isLast = currentLevelIdx === TEAM_IDX || isSecret;
     if (isLast) {
       if (runInitialLevel === 0 && !isSecret) Storage.unlockAch('guardian');
       saveRunRecord(true);
@@ -1525,7 +1534,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     document.getElementById('end-title').textContent = isSecret ? 'FASE SECRETA CONCLUÍDA!' : isLast ? 'CERRADO PROTEGIDO!' : 'FASE CONCLUÍDA!';
     document.getElementById('end-content').innerHTML = `
       <p>TEMPO: ${formatTime(elapsedMs)}</p>
-      <p>SEMENTES DA FASE: ${levelData.collectedInLevel}</p><p>TOTAL ACUMULADO: ${totalRunDelivered}/200</p>
+      <p>SEMENTES DA FASE: ${levelData.collectedInLevel}</p><p>TOTAL ACUMULADO: ${totalRunDelivered}/${SEED_GOAL}</p>
     `;
     if (isLast && !isSecret && runInitialLevel === 0) {
       document.getElementById('menu-end').classList.add('champion');
@@ -1536,12 +1545,6 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const btnNext = document.getElementById('btn-next');
     btnNext.textContent = isLast ? 'JOGAR NOVAMENTE' : 'PRÓXIMA FASE';
     btnNext.onclick = () => isSecret ? showLevels() : isLast ? startRun(0) : startLevel(currentLevelIdx + 1);
-    if(routeSecret){
-      document.getElementById('end-title').textContent='CERRADO SEM VIDA';
-      document.getElementById('end-content').innerHTML=`<p>SEMENTES NAS 4 FASES: ${totalRunDelivered}/200</p><p>O Cerrado perdeu sua biodiversidade.</p>`;
-      btnNext.textContent='FINAL SECRETO';
-      btnNext.onclick=()=>{lives=3;startLevel(SECRET_IDX);};
-    }
     if (isSecret) btnNext.textContent = "ESCOLHER FASE";
     document.getElementById('menu-end').classList.remove('hidden');
   }
@@ -1571,7 +1574,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     const save = Storage.get();
     if (score > save.bestScore) save.bestScore = score;
     if (totalRunSeeds > save.maxSeeds) save.maxSeeds = totalRunSeeds;
-    if (won && runInitialLevel === 0 && currentLevelIdx === LEVELS.length - 1 && (save.bestTimeMs === null || elapsedMs < save.bestTimeMs)) {
+    if (won && runInitialLevel === 0 && currentLevelIdx === TEAM_IDX && (save.bestTimeMs === null || elapsedMs < save.bestTimeMs)) {
       save.bestTimeMs = elapsedMs;
     }
     save.history.unshift({
@@ -1595,7 +1598,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
       document.getElementById('touch-controls').classList.remove('active');
       document.getElementById('menu-pause').classList.remove('hidden');
     } else {
-      AudioFX.startBGM(currentLevelIdx === SECRET_IDX ? 5 : currentLevelIdx);
+      AudioFX.startBGM(currentLevelIdx === TEAM_IDX ? 4 : currentLevelIdx === SECRET_IDX ? 5 : currentLevelIdx);
       state = 'PLAY';
       if (playMode === 'celular') document.getElementById('touch-controls').classList.add('active');
       document.getElementById('menu-pause').classList.add('hidden');
