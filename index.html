@@ -608,7 +608,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
   const TEAM_IDX = SECRET_IDX + 1;
   const TEAM_LEVEL = {...LEVELS[3], id: 6, name: 'FINAL: EQUIPE ALPHADROIDS', length: 800, flora: [], fauna: []};
   const SEED_GOAL = 220;
-  const SECRET_LEVEL = { ...LEVELS[3], id: 5, name: 'FASE SECRETA: CERRADO SEM VIDA', length: 480, mission: 'Atravesse o Cerrado Sem Vida e derrote o Javali Chefe.', bgKey: 'bg_dead', flora: [], fauna: [], curiosity: 'Sem preservação, o Cerrado perde sua biodiversidade.' };
+  const SECRET_LEVEL = { ...LEVELS[3], id: 5, name: 'FASE SECRETA: CERRADO SEM VIDA', length: 4800, mission: 'Atravesse o Cerrado Sem Vida e derrote o Javali Chefe.', bgKey: 'bg_dead', flora: [], fauna: [], curiosity: 'Sem preservação, o Cerrado perde sua biodiversidade.' };
   const ACHIEVEMENTS_DEF = [
     { id: 'first_seed', name: 'Primeira Semente', desc: 'Colete sua primeira semente nativa.' },
     { id: 'protector_50', name: 'Pequeno Protetor', desc: 'Acumule 50 sementes coletadas.' },
@@ -814,7 +814,8 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     }
     if(player.attackTimer<=0 && !player.stomp)b.hitUsed=false;
     if(b.mode==='open' && kickBox && !b.hitUsed && rectsOverlap(kickBox,b)){
-      b.hitUsed=true;b.hp--;b.hits++;score+=100;AudioFX.stomp();spawnParticles(b.x+b.w/2,b.y+20,'#ffcf40',8);
+      const hitDamage=player.stomp?2:1;
+      b.hitUsed=true;b.hp=Math.max(0,b.hp-hitDamage);b.hits+=hitDamage;score+=100*hitDamage;AudioFX.stomp();spawnParticles(b.x+b.w/2,b.y+20,'#ffcf40',8);
       // Pisão aéreo: rebote imediato ao acertar o chefe.
       if (player.stomp) {
         player.stomp = false;
@@ -939,7 +940,7 @@ body[data-play-mode="pc"] #touch-controls {display:none!important;}
     if (idx === 3) { const last = obstacles.map(o=>o.type).lastIndexOf('bird'); if(last>=0) obstacles.splice(last,1); }
     if (idx === SECRET_IDX) { for (const a of [pits, platforms, blocks, seeds, obstacles]) a.length=0; }
     if (idx === TEAM_IDX) { for (const a of [pits, platforms, blocks, seeds, obstacles, decors]) a.length = 0; }
-    const arenaLeft=idx===SECRET_IDX ? 10 : cfg.length-440;
+    const arenaLeft=cfg.length-440;
     if(cfg.id===5){for(const a of [pits,platforms,blocks,obstacles]) for(let i=a.length-1;i>=0;i--)if(a[i].x+(a[i].w||0)>arenaLeft-100)a.splice(i,1);for(const seed of seeds)if(seed.x>=arenaLeft-100)seed.y=GROUND_Y-24;}
     return {
       boss: idx===SECRET_IDX ? {x:cfg.length-180,y:GROUND_Y-88,w:128,h:88,hits:0,left:arenaLeft,right:cfg.length-12,hp:10,mode:'open',time:0,dir:-1,active:false,hitUsed:false}:null,
